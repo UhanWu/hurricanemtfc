@@ -1,0 +1,42 @@
+---
+title: "analysis"
+format: revealjs
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+panel = read.csv("2022-hurricane-panel.csv")
+
+panel2 = panel |>
+  drop_na()
+```
+
+```{r}
+library(sf)
+library(zoo)
+
+waypoints = st_as_sf(panel2, coords = c("LONGITUDE", "LATITUDE"), crs = 4326)
+waypoints.hurricanes = waypoints[(waypoints$STATUS == "HU") & (waypoints$DATE >= "20000101"),]
+
+palette = colorRampPalette(c("darkgreen", "gray", "navy"))
+
+plot(waypoints.hurricanes["DECADE"], pal=palette)
+```
+```{r}
+Sys.setenv(NOAWT=1)
+library(rJava)
+
+library(OpenStreetMap)
+
+base_map  = openmap(c(55, -101), c(5, -6), type="osm")
+
+plot(base_map)
+
+waypoints.hurricanes = st_transform(waypoints.hurricanes, crs=osm())
+
+palette = colorRampPalette(c("darkgreen", "gray", "navy"))
+
+plot(waypoints.hurricanes["DECADE"], pal=palette, add=T)
+```
+
