@@ -22,7 +22,10 @@ panel = cbind(HID = NA, HNAME = NA, csv)
 panel$HID = ifelse(grepl("AL|EP|CP", panel$DATE), panel$DATE, NA)
 
 panel$HNAME = ifelse(grepl("AL|EP|CP", panel$DATE), panel$TIME_UTC, NA)
+```
 
+
+```{r}
 library(zoo)
 
 panel$HID = na.locf(panel$HID)

@@ -1,0 +1,133 @@
+---
+title: "hurdat"
+format: html
+editor: visual
+---
+
+```{r}
+csv = read.csv("hurdat2-1.txt", header=F, as.is=T)
+
+names(csv) = c("DATE", "TIME_UTC", "POINT_TYPE", "STATUS", 
+	"LATITUDE", "LONGITUDE", "WINDSPEED_KT", "PRESURE_MB", 
+	"NE_34KT", "SE_34KT", "NW_34_KT", "SW_34_KT",
+	"NE_50KT", "SE_50KT", "NW_50_KT", "SW_50_KT",
+	"NE_64KT", "SE_64KT", "NW_64_KT", "SW_64_KT", "EyeRadii")
+
+panel = cbind(HID = NA, HNAME = NA, csv)
+
+panel$HID = ifelse(grepl("AL|EP|CP", panel$DATE), panel$DATE, NA)
+
+panel$HNAME = ifelse(grepl("AL|EP|CP", panel$DATE), panel$TIME_UTC, NA)
+
+library(zoo)
+
+panel$HID = na.locf(panel$HID)
+
+panel$HNAME = na.locf(panel$HNAME)
+
+panel = panel[!grepl("AL|EP|CP", panel$DATE), ]
+```
+
+```{r}
+hurricanedf |>
+  filter(HNAME == "IDA")
+```
+
+
+```{r}
+dfhurdat <- panel |>
+  select(!c(STATUS, NE_50KT, SE_50KT, NW_50_KT, SW_50_KT, NE_64KT
+, SE_64KT, NW_64_KT, SW_64_KT)) |>
+  mutate(year = as.double(str_sub(DATE, 0, 4))) |>
+  mutate(HNAME = as.character(HNAME)) 
+
+
+write_csv(dfhurdat, "dfhurdat.csv")
+
+
+
+
+hurricanedf <- read_csv("dfhurdat.csv")
+
+recenthurdf <- hurricanedf|>
+  filter(EyeRadii != -999) |>
+  filter(POINT_TYPE == "L") |>
+  filter(NW_34_KT != -999) |>
+  mutate(Max_34KT = pmax(NE_34KT, SE_34KT, NW_34_KT, SW_34_KT)) |>
+  select(year, HNAME, DATE, TIME_UTC, POINT_TYPE, LATITUDE, LONGITUDE, 
+         WINDSPEED_KT, EyeRadii, Max_34KT, PRESURE_MB) |>
+  group_by(HNAME) |>
+  mutate(selection1 =  max(WINDSPEED_KT)) |>
+  ungroup() |>
+  filter(WINDSPEED_KT==selection1) |>
+  group_by(HNAME) |>
+  mutate(selection2 =  max(Max_34KT)) |>
+  ungroup() |>
+  filter(Max_34KT==selection2) |>
+  group_by(HNAME) |>
+  mutate(selection3 =  max(PRESURE_MB)) |>
+  ungroup() |>
+  filter(PRESURE_MB==selection3) |>
+  select(!c(selection1, selection2, selection3))
+    
+
+write_csv(recenthurdf, "recenthurdf.csv")
+```
+
+```{r}
+
+#MAX WINDSPEED
+hurricanedf |>
+  filter(POINT_TYPE == "L") |>
+  mutate(Max_34KT = pmax(NE_34KT, SE_34KT, NW_34_KT, SW_34_KT)) |>
+  summarise(maxwind = max(WINDSPEED_KT), maxEyeRadii = max(EyeRadii), 
+            maxdist = max(Max_34KT), .by = c(HID)) |>
+  summarise(maxwind = max(maxwind), maxEyeRadii = max(maxEyeRadii), maxdist = max(maxdist), .by = c(HID)) |>
+  ggplot(aes(x = maxwind)) + 
+  geom_histogram(binwidth = 10, color = "white")
+
+# MAXEYERADII
+hurricanedf |>
+  filter(POINT_TYPE == "L") |>
+  mutate(Max_34KT = pmax(NE_34KT, SE_34KT, NW_34_KT, SW_34_KT)) |>
+  summarise(maxwind = max(WINDSPEED_KT), maxEyeRadii = max(EyeRadii), 
+            maxdist = max(Max_34KT), .by = c(HID)) |>
+  summarise(maxwind = max(maxwind), maxEyeRadii = max(maxEyeRadii), maxdist = max(maxdist), .by = c(HID)) |>
+  filter(maxEyeRadii != -999 ) |>
+  filter(maxEyeRadii != 0 ) |>
+  ggplot(aes(x = maxEyeRadii)) + 
+  geom_histogram(binwidth = 5, color = "white")
+
+
+# MAXDISTANCE
+hurricanedf |>
+  filter(POINT_TYPE == "L") |>
+  mutate(Max_34KT = pmax(NE_34KT, SE_34KT, NW_34_KT, SW_34_KT)) |>
+  summarise(maxwind = max(WINDSPEED_KT), maxEyeRadii = max(EyeRadii), 
+            maxdist = max(Max_34KT), .by = c(HID)) |>
+  summarise(maxwind = max(maxwind), maxEyeRadii = max(maxEyeRadii), maxdist = max(maxdist), .by = c(HID)) |>
+  filter(maxdist != -999 ) |>
+  filter(maxdist != 0 ) |>
+  ggplot(aes(x = maxdist)) + 
+  geom_histogram(binwidth = 20, color = "white")
+```
+
+
+```{r}
+recenthurdf
+```
+
+```{r}
+recenthurdf |>
+  ggplot(aes(x = WINDSPEED_KT)) + 
+  geom_histogram(binwidth = 10, color = "white")
+
+recenthurdf |>
+  ggplot(aes(x = EyeRadii)) + 
+  geom_histogram(color = "white")
+```
+
+
+
+
+

@@ -28,7 +28,8 @@ TXpop <- read.csv("TXPOP.csv") |>
     Counties = gsub(" County.*$", "", Counties) # Remove " County" and everything after
   ) |>
   mutate(population = as.numeric(gsub(",", "", Estimates)))|>
-  select(Counties, population)
+  mutate(county = Counties) |>
+  select(county, population)
 
 
 GDPcounty <- read.csv("gdpallcounties.csv") |>
@@ -78,13 +79,16 @@ TXcountyPowergdp <- gdpTXcounty |>
 ```{r}
 TXcountyPower
 
-merge(powerTX, TXcountyPower, by = c("County"), all = TRUE) |>
+dfdeficit <- merge(powerTX, TXcountyPower, by = c("County"), all = TRUE) |>
   select(County, count, totalpower, electric_prop) |>
   mutate_all(~replace(., is.na(.), 0)) |>
   mutate(deficit = totalpower - electric_prop) |>
   arrange(deficit)
 ```
 
+```{r}
+write_csv(dfdeficit,"deficit.csv")
+```
 
 
 

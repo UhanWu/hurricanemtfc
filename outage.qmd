@@ -1,0 +1,271 @@
+---
+title: "testEAGLEI"
+format: revealjs
+editor: visual
+---
+
+```{r}
+outagerawdf <- read_csv("eaglei_outages_2022.csv")
+outagerawdf2021 <- read_csv("eaglei_outages_2021.csv")
+outagerawdf2020 <- read_csv("eaglei_outages_2020.csv")
+outagerawdf2019 <- read_csv("eaglei_outages_2019.csv")
+outagerawdf2018 <- read_csv("eaglei_outages_2018.csv")
+outagerawdf2017 <- read_csv("eaglei_outages_2017.csv")
+outagerawdf2016 <- read_csv("eaglei_outages_2016.csv")
+outagerawdf2015 <- read_csv("eaglei_outages_2015.csv")
+```
+
+
+
+
+
+
+```{r}
+outageALL |>
+  filter(county == "Harris") |>
+  filter(date > '2021-09-11' & date < '2021-09-20' ) |>
+  arrange(date) |>
+  mutate(date = as.Date(date)) |>
+  ggplot(aes(x = date, y = maxdayoutage)) + 
+  geom_col()
+
+outageALL |>
+  filter(county == "Harris") |>
+  filter(date > '2020-10-01' & date < '2020-10-20' ) |>
+  arrange(date) |>
+  mutate(date = as.Date(date)) |>
+  ggplot(aes(x = date, y = maxdayoutage)) + 
+  geom_col()
+
+outageALL |>
+  filter(county == "Harris") |>
+  filter(date > '2020-08-20' & date < '2020-08-30' ) |>
+  arrange(date) |>
+  mutate(date = as.Date(date)) |>
+  ggplot(aes(x = date, y = maxdayoutage)) + 
+  geom_col()
+
+outageALL |>
+  filter(county == "Harris") |>
+  filter(date > '2020-07-20' & date < '2020-07-30' ) |>
+  arrange(date) |>
+  mutate(date = as.Date(date)) |>
+  ggplot(aes(x = date, y = maxdayoutage)) + 
+  geom_col()
+```
+```{r}
+outageALL |>
+  filter(maxdayoutage > 10000) |>
+  filter(date > '2021-01-01' & date < '2021-04-01') |>
+  arrange(date) |>
+  mutate(date = as.Date(date)) |>
+  ggplot(aes(x = date, y = maxdayoutage)) + 
+  geom_col()
+```
+
+
+```{r}
+outageALL |>
+  filter(county == "Harris") |>
+  arrange(date) |>
+  filter(date > '2018-01-01' ) |>
+  mutate(date = as.Date(date)) |>
+  ggplot(aes(x = date, y = maxdayoutage)) + 
+  geom_col()
+```
+
+```{r}
+process2022 <- outagerawdf |>
+  filter(state == "Texas" | state == "Florida") |>
+  arrange(desc(sum)) |>
+  separate(run_start_time, into = c("date", "time"), sep = " ") |>
+  mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
+  drop_na() 
+
+process2021 <- outagerawdf2021 |>
+  filter(state == "Texas" | state == "Florida") |>
+  arrange(desc(sum)) |>
+  separate(run_start_time, into = c("date", "time"), sep = " ") |>
+  mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
+  drop_na() 
+
+process2020 <- outagerawdf2020 |>
+  filter(state == "Texas" | state == "Florida") |>
+  arrange(desc(sum)) |>
+  separate(run_start_time, into = c("date", "time"), sep = " ") |>
+  mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
+  drop_na() 
+
+process2019 <- outagerawdf2019 |>
+  filter(state == "Texas" | state == "Florida") |>
+  arrange(desc(sum)) |>
+  separate(run_start_time, into = c("date", "time"), sep = " ") |>
+  mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
+  drop_na() 
+
+process2018 <- outagerawdf2018 |>
+  filter(state == "Texas" | state == "Florida") |>
+  arrange(desc(sum)) |>
+  separate(run_start_time, into = c("date", "time"), sep = " ") |>
+  mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
+  drop_na() 
+
+
+
+```
+```{r}
+processALL = bind_rows(process2022, process2021, process2020, process2019, process2018)
+```
+```{r}
+write_csv(processALL, "processALL.csv") 
+```
+
+```{r}
+library(tidyverse)
+processALL <- read_csv("processALL.csv")
+
+TXhurprocss <- processALL |>
+  filter(state == "Texas")
+```
+
+```{r}
+TXhurprocss |>
+  filter(date > '2021-02-13' & date < '2021-02-20') |>
+  filter(county == "Harris" | 
+         county == "Fort Bend" |
+         county == "Brazoria" |
+         county == "Galveston" ) |>
+   merge(TXpop) |>
+  summarise(impactPOP = sum(sum)/population, .by = c(county, state, date, time)) |>
+  mutate(date = as.Date(date)) |>
+  arrange(date) |>
+  mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
+  ggplot(aes(x = datetime, y = impactPOP, color = county)) + 
+  geom_line() +
+  facet_wrap(~county)
+```
+```{r}
+fipsTXvulnerM <- TXhurprocss |>
+  filter(date > '2021-02-13' & date < '2021-02-20') |>
+  merge(TXpop) |>
+  summarise(impactPOP = sum(sum)/population, .by = c(county, fips_code)) |>
+  unique()
+  
+write_csv(fipsTXvulnerM, "fipsTXvulnerM.csv")
+
+TXhurprocss |>
+  summarise(counttest = n(), .by = c(fips_code))
+
+
+
+  mutate(date = as.Date(date)) |>
+  arrange(date) |>
+  mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
+  ggplot(aes(x = datetime, y = impactPOP, color = county)) + 
+  geom_line() +
+  facet_wrap(~county)
+```
+```{r}
+library(maps)
+library(dplyr)
+
+data(county.fips)
+
+## Set up fake df_pop_county data frame
+df_pop_county <- fipsTXvulnerM
+y <- df_pop_county$impactPOP
+df_pop_county$color <- gray(y / max(y))
+
+## merge population data with county.fips to make sure color column is
+## ordered correctly.
+counties <- county.fips %>% left_join(df_pop_county, by=c('fips'='region'))
+map("county", fill=TRUE, col=counties$color)
+```
+
+
+
+
+
+```{r}
+TXhurprocss |>
+  filter(date > '2021-09-10' & date < '2021-09-20') |>
+  filter(county == "Harris" | 
+         county == "Fort Bend" |
+         county == "Brazoria" |
+         county == "Galveston" ) |>
+  merge(TXpop) |>
+  summarise(hurimpactPOP = sum(sum)/population, .by = c(county, state, date, time)) |>
+  mutate(date = as.Date(date)) |>
+  arrange(date) |>
+  mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
+  ggplot(aes(x = datetime, y = hurimpactPOP, color = county)) + 
+  geom_line() +
+  facet_wrap(~county)
+```
+
+
+
+
+```{r}
+process2021 |>
+  filter(county == "Harris" | 
+         county == "Dallas" |
+         county == "Tarrant" |
+         county == "Bexar" |  
+         county == "Travis") |>
+  mutate(date = as.Date(date)) |>
+  arrange(date) |>
+  mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
+  ggplot(aes(x = datetime, y = sum)) + 
+  geom_col()
+```
+```{r}
+processALL |>
+  mutate(date = as.Date(date)) |>
+  arrange(date) |>
+  mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
+  mutate(scale10 = sum*10) |>
+  ggplot(aes(x = datetime, y = scale10)) + 
+  geom_col()
+```
+
+
+
+```{r}
+processALL |>
+  filter(date > '2021-09-11' & date < '2021-09-20' ) |>
+  mutate(date = as.Date(date)) |>
+  arrange(date) |>
+  mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
+  ggplot(aes(x = datetime, y = sum)) + 
+  geom_col()
+
+processALL |>
+  filter(date > '2020-10-01' & date < '2020-10-20' ) |>
+  mutate(date = as.Date(date)) |>
+  arrange(date) |>
+  mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
+  ggplot(aes(x = datetime, y = sum)) + 
+  geom_col()
+
+processALL |>
+  filter(date > '2021-02-14' & date < '2021-02-20' ) |>
+  mutate(date = as.Date(date)) |>
+  arrange(date) |>
+  mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
+  ggplot(aes(x = datetime, y = sum)) + 
+  geom_col()
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
