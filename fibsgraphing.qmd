@@ -4,23 +4,83 @@ format: html
 editor: visual
 ---
 
-## Quarto
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
-
 ```{r}
-1 + 1
+library(ggplot2)
+library(sf)
+library(dplyr)
+library(tidyverse)
+library(maps)
+library(urbnmapr)
 ```
 
-You can add options to executable code like this
-
 ```{r}
-#| echo: false
-2 * 2
+
+
+
+#   Winter Storm: filter(date > '2021-02-13' & date < '2021-02-20') |>
+#   Hurricane Nicholas: filter(date > '2021-09-10' & date < '2021-09-20') |>
+
+data_df <- TXhurprocss |>
+  filter(date > '2021-09-10' & date < '2021-09-20') |>
+  merge(TXpop) |>
+  filter(sum < population) |>
+  summarise(impactPOP = max(sum)/population, .by = c(county, fips_code)) |>
+  unique() |>
+  mutate(county_fips = as.character(fips_code))
+
+
+data_df %>% 
+  left_join(counties, by = "county_fips") %>% 
+  filter(state_name =="Texas") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = impactPOP)) +
+  geom_polygon(color = "#ffffff", size = .25) +
+  scale_fill_gradientn(colors = c("lightblue", "red"),
+                       guide = guide_colorbar(title.position = "top")) +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme(legend.title = element_text(),
+        legend.key.width = unit(.5, "in")) +
+  labs(fill = "Vulnerability Matrix (Nicholas Max.)")
+
+
+
+
+```
+```{r}
+
+fipsTEX <- TXhurprocss |>
+  summarise(fibstest = n(), .by = c('county', "fips_code")) |>
+  mutate(county = county) |>
+  select(fips_code, county) |>
+  mutate(county_fips = as.character(fips_code))
+  
+  
+dfdeficit |>
+  merge(fipsTEX) |>
+  left_join(counties, by = "county_fips") %>% 
+  filter(state_name =="Texas") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = deficit)) +
+  geom_polygon(color = "#ffffff", size = .25) +
+  scale_fill_gradientn(colors = c("red","lightblue"),
+                       guide = guide_colorbar(title.position = "top")) +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme(legend.title = element_text(),
+        legend.key.width = unit(.5, "in")) +
+  labs(fill = "Electric Deficit")
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+
+```{r}
+TXhurprocss
+```
+
+
+
+
+
+
+
+
+
+
+
+

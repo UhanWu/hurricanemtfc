@@ -15,7 +15,8 @@ powerplantcsv <- read_csv("Power_Plants_in_the_U.S..csv")
 powerTX <- powerplantcsv |>
   select(FID,Longitude, Latitude, City, County, State, PrimSource, Total_MW) |>
   filter(State == 'Texas') |>
-  summarise(count = n(), totalpower = sum(Total_MW), .by = c("County",'State'))
+  summarise(count = n(), totalpower = sum(Total_MW), .by = c("County",'State')) |>
+  mutate(county = County)
 
 
 
@@ -63,8 +64,7 @@ powerTX |>
 TXcountyPower <- TXpop |>
   mutate(pop_prop = population/sum(population)) |>
   mutate(electric_prop = round((pop_prop*149783.2),3)) |>
-  select(Counties, population, electric_prop) |>
-  mutate(County = Counties) |>
+  select(county, population, electric_prop) |>
   arrange(desc(electric_prop))
 
 
@@ -79,11 +79,11 @@ TXcountyPowergdp <- gdpTXcounty |>
 ```{r}
 TXcountyPower
 
-dfdeficit <- merge(powerTX, TXcountyPower, by = c("County"), all = TRUE) |>
-  select(County, count, totalpower, electric_prop) |>
+dfdeficit <- merge(powerTX, TXcountyPower, all = TRUE) |>
+  select(county, count, totalpower, electric_prop) |>
   mutate_all(~replace(., is.na(.), 0)) |>
   mutate(deficit = totalpower - electric_prop) |>
-  arrange(deficit)
+  arrange(desc(deficit))
 ```
 
 ```{r}

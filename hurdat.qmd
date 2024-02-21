@@ -36,8 +36,7 @@ hurricanedf |>
 
 ```{r}
 dfhurdat <- panel |>
-  select(!c(STATUS, NE_50KT, SE_50KT, NW_50_KT, SW_50_KT, NE_64KT
-, SE_64KT, NW_64_KT, SW_64_KT)) |>
+  select(!c(STATUS)) |>
   mutate(year = as.double(str_sub(DATE, 0, 4))) |>
   mutate(HNAME = as.character(HNAME)) 
 
@@ -77,39 +76,83 @@ write_csv(recenthurdf, "recenthurdf.csv")
 ```{r}
 
 #MAX WINDSPEED
-hurricanedf |>
+maxwinddf <- hurricanedf |>
   filter(POINT_TYPE == "L") |>
   mutate(Max_34KT = pmax(NE_34KT, SE_34KT, NW_34_KT, SW_34_KT)) |>
   summarise(maxwind = max(WINDSPEED_KT), maxEyeRadii = max(EyeRadii), 
             maxdist = max(Max_34KT), .by = c(HID)) |>
   summarise(maxwind = max(maxwind), maxEyeRadii = max(maxEyeRadii), maxdist = max(maxdist), .by = c(HID)) |>
+  filter(maxwind != -999 ) |>
+  filter(maxwind != 0 )  
+
+
   ggplot(aes(x = maxwind)) + 
   geom_histogram(binwidth = 10, color = "white")
 
+
+min_value <- min(maxwinddf$maxwind)
+max_value <- max(maxwinddf$maxwind)
+desired_interval_size <- 10 # Change this to your desired interval size
+breaks_number <- (max_value - min_value) / desired_interval_size
+
+hist(maxwinddf$maxwind, prob = TRUE, breaks = breaks_number)
+
+lines(density(maxwinddf$maxwind), col = "red")
+
+
 # MAXEYERADII
-hurricanedf |>
+eyeradiidf <- hurricanedf |>
   filter(POINT_TYPE == "L") |>
   mutate(Max_34KT = pmax(NE_34KT, SE_34KT, NW_34_KT, SW_34_KT)) |>
   summarise(maxwind = max(WINDSPEED_KT), maxEyeRadii = max(EyeRadii), 
             maxdist = max(Max_34KT), .by = c(HID)) |>
   summarise(maxwind = max(maxwind), maxEyeRadii = max(maxEyeRadii), maxdist = max(maxdist), .by = c(HID)) |>
   filter(maxEyeRadii != -999 ) |>
-  filter(maxEyeRadii != 0 ) |>
+  filter(maxEyeRadii != 0 ) 
+
+
+
+
   ggplot(aes(x = maxEyeRadii)) + 
   geom_histogram(binwidth = 5, color = "white")
 
 
+min_value <- min(eyeradiidf$maxEyeRadii)
+max_value <- max(eyeradiidf$maxEyeRadii)
+desired_interval_size <- 10 # Change this to your desired interval size
+breaks_number <- (max_value - min_value) / desired_interval_size
+
+hist(eyeradiidf$maxEyeRadii, prob = TRUE, breaks = breaks_number)
+
+lines(density(eyeradiidf$maxEyeRadii), col = "red")
+
+
 # MAXDISTANCE
-hurricanedf |>
+distdf <- hurricanedf |>
   filter(POINT_TYPE == "L") |>
   mutate(Max_34KT = pmax(NE_34KT, SE_34KT, NW_34_KT, SW_34_KT)) |>
   summarise(maxwind = max(WINDSPEED_KT), maxEyeRadii = max(EyeRadii), 
             maxdist = max(Max_34KT), .by = c(HID)) |>
   summarise(maxwind = max(maxwind), maxEyeRadii = max(maxEyeRadii), maxdist = max(maxdist), .by = c(HID)) |>
   filter(maxdist != -999 ) |>
-  filter(maxdist != 0 ) |>
+  filter(maxdist != 0 ) 
+
+
   ggplot(aes(x = maxdist)) + 
-  geom_histogram(binwidth = 20, color = "white")
+  geom_histogram(binwidth = 20, color = "white") 
+
+
+min_value <- min(distdf$maxdist)
+max_value <- max(distdf$maxdist)
+desired_interval_size <- 20 # Change this to your desired interval size
+breaks_number <- (max_value - min_value) / desired_interval_size
+
+hist(distdf$maxdist, prob = TRUE, breaks = breaks_number)
+
+# Overlay a density plot
+lines(density(distdf$maxdist), col = "red")
+
+
 ```
 
 
@@ -118,14 +161,111 @@ recenthurdf
 ```
 
 ```{r}
-recenthurdf |>
-  ggplot(aes(x = WINDSPEED_KT)) + 
-  geom_histogram(binwidth = 10, color = "white")
+library(ggplot2)
+library(maps)
+library(dplyr)
+library(stringr)
 
-recenthurdf |>
-  ggplot(aes(x = EyeRadii)) + 
-  geom_histogram(color = "white")
+# Load Texas map data
+texas_map <- map_data("state", region = regions)
+regions <- c("texas", "louisiana")
+
+
+# Assuming hurricanedf is your hurricane DataFrame
+hurricane_plot_data <- hurricanedf %>%
+  filter(HNAME == "NICHOLAS") %>%
+  filter(year == 2021) %>%
+  mutate(lat = as.double(str_sub(LATITUDE, 1, 4))) %>% # Corrected to start at 1 instead of 0
+  mutate(long = -as.double(str_sub(LONGITUDE, 1, 4))) |> # Corrected to start at 1 instead of 0
+  filter(lat > 25) |>
+  mutate(maxkt34 = pmax(NE_34KT, SE_34KT, NW_34_KT, SW_34_KT)) |>
+  mutate(maxkt50 = pmax(NE_50KT, SE_50KT, NW_50_KT, SW_50_KT)) |>
+  mutate(maxkt64 = pmax(NE_64KT, SE_64KT, NW_64_KT, SW_64_KT)) 
+
+# Plot Texas map and overlay hurricane Nicholas data
+ggplot() +
+  geom_polygon(data = texas_map, aes(x = long, y = lat, group = group), fill = "lightblue", color = "white") +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(EyeRadii == 0, NA, EyeRadii)), 
+             color = "red", alpha = 0.3) +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(maxkt34 == 0, NA, maxkt34)), 
+             color = "yellow", alpha = 0.3) +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(maxkt50 == 0, NA, maxkt50)), 
+             color = "green", alpha = 0.3) +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(maxkt64 == 0, NA, maxkt64)), 
+             color = "blue", alpha = 0.3) +
+  scale_size_continuous(name = "Wind Radii (nmi)", range = c(3, 19), limits = c(1, NA)) +  # Ensure 0 values are not plotted
+  coord_fixed(1.3) +  # Maintain aspect ratio
+  ggtitle("Hurricane Nicholas (2021) Path Over Texas") +
+  theme_minimal() +
+  theme(legend.position = "none")  # Hide the legend
 ```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+library(USAboundaries)
+library(ggplot2)
+
+# Assuming hurricane_plot_data is your prepared dataset and texas_map is already loaded
+
+# Modified ggplot code
+ggplot() +
+  geom_polygon(data = texas_map, aes(x = long, y = lat, group = group), fill = "lightblue", color = "white") +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(EyeRadii == 0, NA, EyeRadii)), 
+             color = "red", alpha = 0.3) +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(maxkt34 == 0, NA, maxkt34)), 
+             color = "yellow", alpha = 0.3) +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(maxkt50 == 0, NA, maxkt50)), 
+             color = "green", alpha = 0.3) +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(maxkt64 == 0, NA, maxkt64)), 
+             color = "blue", alpha = 0.3) +
+  scale_size_continuous(name = "Wind Radii (nmi)", range = c(3, 19), limits = c(1, NA)) +  # Ensure 0 values are not plotted
+  coord_fixed(1.3) +  # Maintain aspect ratio
+  ggtitle("Hurricane Nicholas (2021) Path Over Texas") +
+  theme_minimal() +
+  theme(legend.position = "none")  # Hide the legend
+
+```
+
+
+```{r warning=FALSE}
+library(ggplot2)
+library(sf)
+
+
+counties_sf <- us_counties()
+
+
+names(counties_sf) <- make.unique(names(counties_sf), sep = "_")
+
+# Proceed with filtering if duplicates are resolved
+counties_filtered <- counties_sf %>%
+  filter(state_abbr %in% states_of_interest)
+# Assuming counties_filtered is an 'sf' object with appropriate CRS
+# and other data preparations are already done
+
+ggplot() +
+  geom_sf(data = counties_filtered, fill = 'lightblue', color = "black", size = 0.25, alpha = 0.5) +  # County boundaries
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(EyeRadii == 0, NA, EyeRadii)), color = "red", alpha = 0.3) +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(maxkt34 == 0, NA, maxkt34)), color = "yellow", alpha = 0.3) +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(maxkt50 == 0, NA, maxkt50)), color = "green", alpha = 0.3) +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(maxkt64 == 0, NA, maxkt64)), color = "blue", alpha = 0.3) +
+  scale_size_continuous(name = "Wind Radii (nmi)", range = c(3, 19), limits = c(1, NA)) +
+  coord_sf() +  # Use coord_sf() to integrate sf spatial data
+  ggtitle("Hurricane Nicholas (2021) Windfield") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+
+```
+
+
+```{r}
+
+```
+
+
 
 
 

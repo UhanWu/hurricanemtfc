@@ -136,6 +136,7 @@ TXhurprocss |>
          county == "Brazoria" |
          county == "Galveston" ) |>
    merge(TXpop) |>
+  filter(sum < population) |>
   summarise(impactPOP = sum(sum)/population, .by = c(county, state, date, time)) |>
   mutate(date = as.Date(date)) |>
   arrange(date) |>
@@ -148,9 +149,11 @@ TXhurprocss |>
 fipsTXvulnerM <- TXhurprocss |>
   filter(date > '2021-02-13' & date < '2021-02-20') |>
   merge(TXpop) |>
-  summarise(impactPOP = sum(sum)/population, .by = c(county, fips_code)) |>
+  summarise(impactPOP = sum(sum), .by = c(county, fips_code)) |>
   unique()
   
+
+
 write_csv(fipsTXvulnerM, "fipsTXvulnerM.csv")
 
 TXhurprocss |>
@@ -165,22 +168,8 @@ TXhurprocss |>
   geom_line() +
   facet_wrap(~county)
 ```
-```{r}
-library(maps)
-library(dplyr)
 
-data(county.fips)
 
-## Set up fake df_pop_county data frame
-df_pop_county <- fipsTXvulnerM
-y <- df_pop_county$impactPOP
-df_pop_county$color <- gray(y / max(y))
-
-## merge population data with county.fips to make sure color column is
-## ordered correctly.
-counties <- county.fips %>% left_join(df_pop_county, by=c('fips'='region'))
-map("county", fill=TRUE, col=counties$color)
-```
 
 
 
@@ -194,6 +183,7 @@ TXhurprocss |>
          county == "Brazoria" |
          county == "Galveston" ) |>
   merge(TXpop) |>
+  filter(sum < population) |>
   summarise(hurimpactPOP = sum(sum)/population, .by = c(county, state, date, time)) |>
   mutate(date = as.Date(date)) |>
   arrange(date) |>
