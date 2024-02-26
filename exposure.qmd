@@ -1,0 +1,73 @@
+---
+title: "hurricaneexposure"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(hurricaneexposure)
+library(hurricaneexposuredata)
+
+```
+```{r}
+map_counties(storm = "Harvey-2017", metric = "wind", wind_var = "vmax_sust")
+```
+
+```{r}
+
+data("hurr_tracks")
+map_counties(storm = "Harvey-2017", metric = "wind", wind_var = "vmax_gust")
+
+map_counties("Floyd-1999", metric = "rainfall", days_included = c(-2, -1, 0, 1))
+
+
+storm_winds |>
+  mutate(firstfips = str_sub(fips, 0, 2)) |>
+  filter(firstfips == "48") |>
+  filter(vmax_gust > 17.49)
+  group_by(fips) |>
+    summarise()
+
+
+closest_dist |>
+  mutate(firstfips = str_sub(fips, 0, 2)) |>
+  filter(firstfips == "48") |>
+  filter(storm_id == "Imelda-2019")
+
+rain |>
+  summarise(count = n(), .by = storm_id)
+  filter(storm_id == "Harvey-2017")
+
+```
+```{r}
+map_counties(storm = "Allison-2001", metric = "rainfall", days_included = -1:0) + 
+        ggplot2::ggtitle("Rain during Allison (2001) for day before and day of closest approach")
+```
+
+
+```{r}
+hurr_tracks |>
+  mutate(date_new = as.double(str_sub(date, 0, 4))) |>
+  filter(date_new > 1997)
+```
+```{r}
+
+stormsfreq <- storm_winds |>
+  mutate(firstfips = str_sub(fips, 1, 2)) |>
+  filter(firstfips == "48") |>
+  filter(vmax_gust > 17.49)  |>
+  mutate(year = as.double(str_extract(storm_id, "\\d{4}$"))) |>
+  filter(year > 2018)
+
+
+|>
+  summarise(frequency = n(), .by = fips)
+```
+
+
+```{r}
+county_centers
+```
+
+

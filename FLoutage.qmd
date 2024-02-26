@@ -1,0 +1,80 @@
+---
+title: "FLoutage"
+format: html
+editor: visual
+---
+
+```{r}
+FLprocessALL <- read_csv("FLprocessALL.csv")
+```
+
+```{r}
+FLprocessALL
+```
+```{r}
+countieslistFL<- FLprocessALL |>
+  summarise(hi = 0, .by = c(county, fips_code))
+```
+
+```{r}
+countieslistFL
+```
+
+```{r}
+freqTXhur <- FLprocessALL |>
+  mutate(month = str_sub(date, 0, 7)) |>
+  arrange(sum) |>
+  filter(sum > 1000) |>
+  filter(date > '2019-09-15' & date < '2019-09-25' |
+         date > '2020-07-20' & date < '2020-08-01' |
+         date > '2020-08-20' & date < '2020-09-05' |
+         date > '2020-09-10' & date < '2020-09-20' |
+         date > '2020-10-05' & date < '2020-10-20' |
+         date > '2021-09-10' & date < '2021-09-20'
+         ) |>
+  arrange(month) 
+
+frequencydf <- freqTXhur |>
+  mutate(hur1 = if_else(date > '2019-09-15' & date < '2019-09-25', 1, 0),
+         hur2 = if_else(date > '2020-07-20' & date < '2020-08-01', 1, 0),
+         hur3 = if_else(date > '2020-08-20' & date < '2020-09-05', 1, 0),
+         hur4 = if_else(date > '2020-09-10' & date < '2020-09-20', 1, 0),
+         hur5 = if_else(date > '2020-10-05' & date < '2020-10-20', 1, 0),
+         hur6 = if_else(date > '2021-09-10' & date < '2021-09-20', 1, 0)) |>
+  summarise(greatestsum = max(sum), .by = c(month, fips_code, county, hur1, hur2, hur3, hur4, hur5, hur6))|>
+  arrange(county) |>
+  mutate(totalfreq = hur1 + hur2 + hur3 + hur4 + hur5 +hur6) |>
+  summarise(frequency = sum(totalfreq), .by = c(county, fips_code))
+```
+
+
+
+
+```{r}
+plotfrequencyHURFL <- countieslistFL |>
+  merge(frequencydf, all = T) |>
+  mutate(frequencyfinal = ifelse(is.na(frequency), 0, frequency)) |>
+  mutate(county_fips = as.character(fips_code)) 
+
+
+
+plotfrequencyHUR %>% 
+  left_join(counties, by = "county_fips") %>% 
+  filter(state_name =="Texas") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = frequencyfinal)) +
+  geom_polygon(color = "black", size = .25) +
+  scale_fill_gradientn(colors = c("white", "red"),
+                       guide = guide_colorbar(title.position = "top")) +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme(legend.title = element_text(),
+        legend.key.width = unit(0.6, "in")) +
+  labs(fill = "# Hurricane Hit", x = "Longitude", y = "Latitude") + 
+  theme_bw()
+```
+
+
+
+
+
+
+
