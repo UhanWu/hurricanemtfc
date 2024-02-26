@@ -5,6 +5,8 @@ editor: visual
 ---
 
 ```{r}
+
+library(tidyverse)
 outagerawdf <- read_csv("eaglei_outages_2022.csv")
 outagerawdf2021 <- read_csv("eaglei_outages_2021.csv")
 outagerawdf2020 <- read_csv("eaglei_outages_2020.csv")
@@ -76,54 +78,83 @@ outageALL |>
 
 ```{r}
 process2022 <- outagerawdf |>
-  filter(state == "Texas" | state == "Florida") |>
+  filter(state == "Florida") |>
   arrange(desc(sum)) |>
   separate(run_start_time, into = c("date", "time"), sep = " ") |>
   mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
   drop_na() 
 
 process2021 <- outagerawdf2021 |>
-  filter(state == "Texas" | state == "Florida") |>
+  filter(state == "Florida") |>
   arrange(desc(sum)) |>
   separate(run_start_time, into = c("date", "time"), sep = " ") |>
   mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
   drop_na() 
 
 process2020 <- outagerawdf2020 |>
-  filter(state == "Texas" | state == "Florida") |>
+  filter(state == "Florida") |>
   arrange(desc(sum)) |>
   separate(run_start_time, into = c("date", "time"), sep = " ") |>
   mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
   drop_na() 
 
 process2019 <- outagerawdf2019 |>
-  filter(state == "Texas" | state == "Florida") |>
+  filter(state == "Florida") |>
   arrange(desc(sum)) |>
   separate(run_start_time, into = c("date", "time"), sep = " ") |>
   mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
   drop_na() 
 
 process2018 <- outagerawdf2018 |>
-  filter(state == "Texas" | state == "Florida") |>
+  filter(state == "Florida") |>
+  arrange(desc(sum)) |>
+  separate(run_start_time, into = c("date", "time"), sep = " ") |>
+  mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
+  drop_na() 
+
+process2017 <- outagerawdf2017 |>
+  filter(state == "Florida") |>
+  arrange(desc(sum)) |>
+  separate(run_start_time, into = c("date", "time"), sep = " ") |>
+  mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
+  drop_na() 
+
+process2016 <- outagerawdf2016 |>
+  filter(state == "Texas") |>
+  arrange(desc(sum)) |>
+  separate(run_start_time, into = c("date", "time"), sep = " ") |>
+  mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
+  drop_na() 
+
+process2015 <- outagerawdf2015 |>
+  filter(state == "Texas") |>
   arrange(desc(sum)) |>
   separate(run_start_time, into = c("date", "time"), sep = " ") |>
   mutate(time = ifelse(is.na(time), "00:00:00", time)) |>
   drop_na() 
 
 
+```
+```{r}
+processALL = bind_rows(process2022, process2021, process2020, process2019, process2018, process2017, process2016, process2015)
+```
+```{r}
+process2017 |>
+  filter(county == "Harris")
+```
 
-```
-```{r}
-processALL = bind_rows(process2022, process2021, process2020, process2019, process2018)
-```
-```{r}
-write_csv(processALL, "processALL.csv") 
-```
 
 ```{r}
+process2017 |>
+arrange(desc(sum))
+```
+
+
+
+```{r}
+write_csv(processALL, "FLprocessALL.csv")
 library(tidyverse)
 processALL <- read_csv("processALL.csv")
-
 TXhurprocss <- processALL |>
   filter(state == "Texas")
 ```
@@ -192,6 +223,31 @@ TXhurprocss |>
   geom_line() +
   facet_wrap(~county)
 ```
+```{r}
+#Testing
+
+my_exp_formula <-  y ~ a * exp(b*x-0)
+
+TXhurprocss |>
+  filter(date > '2021-09-12') |>
+  filter(date < '2021-09-20') |>
+  filter(county == "Harris" | 
+         county == "Fort Bend" |
+         county == "Brazoria" |
+         county == "Galveston" ) |>
+  mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
+  arrange(desc(sum)) |>
+  merge(TXpop) |>
+  filter(sum < population) |>
+  summarise(hurimpactPOP = sum(sum)/population, .by = c(county, state, date, time)) |>
+  mutate(date = as.Date(date)) |>
+  arrange(date) |>
+  mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
+  ggplot(aes(x = datetime, y = hurimpactPOP, color = county)) + 
+  geom_line() +
+  geom_smooth(method="lm", aes(color="county"), formula = y ~ a * x^b)
+  facet_wrap(~county) 
+```
 
 
 
@@ -249,6 +305,103 @@ processALL |>
 
 
 ```
+
+
+
+
+```{r}
+TXhurprocss
+```
+
+
+```{r}
+#Hurricane Laura
+
+TXhurprocss |>
+  arrange(date) |>
+  filter(date > '2020-08-15' & date < '2020-09-01') |>
+  merge(TXpop) |>
+  filter(sum < population) |>
+  arrange(desc(sum)) |>
+  summarise(sumdemage = sum(sum), .by = county) |>
+  arrange(desc(sumdemage))
+```
+
+
+```{r}
+freqTXhur <- TXhurprocss |>
+  mutate(month = str_sub(date, 0, 7)) |>
+  arrange(sum) |>
+  filter(sum > 1000) |>
+  merge(TXpop) |>
+  filter(sum < population) |>
+  filter(date > '2019-09-15' & date < '2019-09-25' |
+         date > '2020-07-20' & date < '2020-08-01' |
+         date > '2020-08-20' & date < '2020-09-05' |
+         date > '2020-09-10' & date < '2020-09-20' |
+         date > '2020-10-05' & date < '2020-10-20' |
+         date > '2021-09-10' & date < '2021-09-20'
+         ) |>
+  arrange(month) 
+
+frequencydf <- freqTXhur |>
+  mutate(hur1 = if_else(date > '2019-09-15' & date < '2019-09-25', 1, 0),
+         hur2 = if_else(date > '2020-07-20' & date < '2020-08-01', 1, 0),
+         hur3 = if_else(date > '2020-08-20' & date < '2020-09-05', 1, 0),
+         hur4 = if_else(date > '2020-09-10' & date < '2020-09-20', 1, 0),
+         hur5 = if_else(date > '2020-10-05' & date < '2020-10-20', 1, 0),
+         hur6 = if_else(date > '2021-09-10' & date < '2021-09-20', 1, 0)) |>
+  summarise(greatestsum = max(sum), .by = c(month, fips_code, county, hur1, hur2, hur3, hur4, hur5, hur6))|>
+  arrange(county) |>
+  mutate(totalfreq = hur1 + hur2 + hur3 + hur4 + hur5 +hur6) |>
+  summarise(frequency = sum(totalfreq), .by = c(county, fips_code))
+  
+```
+
+```{r}
+freqTXhur |>
+  ggplot(aes(x = date)) + 
+  geom_histogram()
+```
+
+
+```{r}
+countieslistTX <- TXhurprocss |>
+  summarise(hi = 0, .by = c(county, fips_code))
+```
+
+```{r}
+TXhurprocss |>
+  filter(state == "Texas") |>
+  filter(date > "2017-08-20") |>
+  filter(date < "2017-09-10") |>
+  group_by(county)
+
+
+
+```
+
+```{r}
+
+centercounty <- county_centers |>
+  filter(state_name == "Texas") |>
+  mutate(fips_code = as.double(fips)) |>
+  select(fips_code, population, latitude, longitude)
+
+TXhurprocss |>
+  filter(state == "Texas")|>
+  merge(centercounty)
+  
+```
+
+
+
+
+
+
+
+
+
 
 
 

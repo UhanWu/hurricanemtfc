@@ -21,10 +21,11 @@ library(urbnmapr)
 #   Hurricane Nicholas: filter(date > '2021-09-10' & date < '2021-09-20') |>
 
 data_df <- TXhurprocss |>
-  filter(date > '2021-09-10' & date < '2021-09-20') |>
+  filter(date > '2021-02-13' & date < '2021-02-20' |
+           date > '2021-09-10' & date < '2021-09-20' |) |>
   merge(TXpop) |>
   filter(sum < population) |>
-  summarise(impactPOP = max(sum)/population, .by = c(county, fips_code)) |>
+  summarise(impactPOP = sum(sum)/population, .by = c(county, fips_code)) |>
   unique() |>
   mutate(county_fips = as.character(fips_code))
 
@@ -39,7 +40,7 @@ data_df %>%
   coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
   theme(legend.title = element_text(),
         legend.key.width = unit(.5, "in")) +
-  labs(fill = "Vulnerability Matrix (Nicholas Max.)")
+  labs(fill = "Severity Matrix ")
 
 
 
@@ -77,9 +78,123 @@ TXhurprocss
 
 
 
+```{r}
+data_dfLaura <- TXhurprocss |>
+  filter(date > '2020-08-20' & date < '2020-08-29') |>
+  merge(TXpop) |>
+  filter(sum < population) |>
+  summarise(impactPOP = sum(sum)/population, .by = c(county, fips_code)) |>
+  unique() |>
+  mutate(county_fips = as.character(fips_code))
+
+
+data_dfLaura %>% 
+  left_join(counties, by = "county_fips") %>% 
+  filter(state_name =="Texas") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = impactPOP)) +
+  geom_polygon(color = "#ffffff", size = .25) +
+  scale_fill_gradientn(colors = c("lightblue", "red"),
+                       guide = guide_colorbar(title.position = "top")) +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme(legend.title = element_text(),
+        legend.key.width = unit(.5, "in")) +
+  labs(fill = "Vulnerability Matrix (Laura Cum.)")
+```
+
+
+```{r}
+stormsfreq2 <- stormsfreq |>
+  mutate(fips_code = fips)
+
+plotfrequencyHUR <- countieslistTX |>
+  merge(stormsfreq2, all = T) |>
+  mutate(frequencyfinal = ifelse(is.na(frequency), 0, frequency)) |>
+  mutate(county_fips = as.character(fips_code)) 
 
 
 
+plotfrequencyHUR %>% 
+  left_join(counties, by = "county_fips") %>% 
+  filter(state_name =="Texas") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = frequencyfinal)) +
+  geom_polygon(color = "black", size = .25) +
+  scale_fill_gradientn(colors = c("white", "red"),
+                       guide = guide_colorbar(title.position = "top")) +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme(legend.title = element_text(),
+        legend.key.width = unit(0.6, "in")) +
+  labs(fill = "# Hurricane Hit", x = "Longitude", y = "Latitude") + 
+  theme_bw()
+```
+
+```{r}
+TXpop <- read_csv("TXPOP.csv")
+
+data_df <- TXhurprocss |>
+  filter(sum > 1000) |>
+  filter(date > '2019-09-15' & date < '2019-09-25' |
+         date > '2020-07-20' & date < '2020-08-01' |
+         date > '2020-08-20' & date < '2020-09-05' |
+         date > '2020-09-10' & date < '2020-09-20' |
+         date > '2020-10-05' & date < '2020-10-20' |
+         date > '2021-09-10' & date < '2021-09-20' ) 
+
+|>
+  merge(TXpop) |>
+  filter(sum < population) |>
+  summarise(impactPOP = sum(max(sum))/population, .by = c(county, fips_code)) |>
+  unique() |>
+  mutate(county_fips = as.character(fips_code))
+
+
+severitytest <- freqTXhur |>
+  mutate(hur1 = if_else(date > '2019-09-15' & date < '2019-09-25', 1, 0),
+         hur2 = if_else(date > '2020-07-20' & date < '2020-08-01', 1, 0),
+         hur3 = if_else(date > '2020-08-20' & date < '2020-09-05', 1, 0),
+         hur4 = if_else(date > '2020-09-10' & date < '2020-09-20', 1, 0),
+         hur5 = if_else(date > '2020-10-05' & date < '2020-10-20', 1, 0),
+         hur6 = if_else(date > '2021-09-10' & date < '2021-09-20', 1, 0)) |>
+  summarise(greatestsum = max(sum), .by = c(month, fips_code, county, hur1, hur2, hur3, hur4, hur5, hur6))|>
+  arrange(county) |>
+  mutate(totalfreq = hur1 + hur2 + hur3 + hur4 + hur5 +hur6)|>
+  summarise(severity = sum(greatestsum), .by = c(county, fips_code))
+
+svTXhur <- countieslistTX |>
+  merge(TXpop) |>
+  merge(severitytest, all = T) |>
+  mutate(severity = ifelse(is.na(severity), 0, severity)) |>
+  mutate(severity_final = severity/population) |>
+  mutate(county_fips = as.character(fips_code)) 
+
+
+svTXhur %>% 
+  left_join(counties, by = "county_fips") %>% 
+  filter(state_name =="Texas") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = severity_final)) +
+  geom_polygon(color = "black", size = .25) +
+  scale_fill_gradientn(colors = c("white", "blue"),
+                       guide = guide_colorbar(title.position = "top")) +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme(legend.title = element_text(),
+        legend.key.width = unit(.5, "in")) +
+  labs(fill = "Total Outages/Pop.", x = "Longitude", y = "Latitude") + 
+  theme_bw()
+```
+```{r}
+library(StormR)
+
+sds <- defStormsDataset()
+
+sds$names
+st <- defStormsList(sds = sds, loi = "Mexico", names = "HARVEY", verbose = 0)
+plotStorms(st)
+```
+```{r}
+library(rworldxtra)
+library(sp)
+ss <- spatialBehaviour(st, product = c("MSW"), verbose = 0, spaceRes = "10min", tempRes = 30)
+plotBehaviour(st, ss$PAM_MSW)
+```
 
 
 

@@ -23,6 +23,7 @@ palette = colorRampPalette(c("darkgreen", "gray", "navy"))
 
 plot(waypoints.hurricanes["DECADE"], pal=palette)
 ```
+
 ```{r}
 Sys.setenv(NOAWT=1)
 library(rJava)
@@ -39,4 +40,3 @@ palette = colorRampPalette(c("darkgreen", "gray", "navy"))
 
 plot(waypoints.hurricanes["DECADE"], pal=palette, add=T)
 ```
-

@@ -9,7 +9,14 @@ library(tidyverse)
 ```
 
 ```{r}
-powerplantcsv <- read_csv("Power_Plants_in_the_U.S..csv")
+powerplantcsv <- read_csv("Power_Plants_in_the_U.S..csv") 
+
+#Power Generating in Daily Production
+
+powerplantcsv |>
+  summarise(combinepower = sum(Total_MW)*365)
+
+Total_MW 
 ```
 ```{r}
 powerTX <- powerplantcsv |>
@@ -18,7 +25,7 @@ powerTX <- powerplantcsv |>
   summarise(count = n(), totalpower = sum(Total_MW), .by = c("County",'State')) |>
   mutate(county = County)
 
-
+powerTX
 
 ```
 
@@ -52,7 +59,7 @@ gdpTXcounty <- merge(GDPcounty, fipsTX, .by = c('fips'))
 ```{r}
 TXpop
 gdpTXcounty
-powerTX
+powerTX 
 ```
 ```{r}
 powerTX |>
@@ -91,8 +98,16 @@ write_csv(dfdeficit,"deficit.csv")
 ```
 
 
+```{r}
+powerplantcsv |>
+  filter(State == "Texas") |>
+  select(Longitude, Latitude, Total_MW, County, State, PrimSource)
+```
 
 
+```{r}
+nicholas <- read_csv("NICHOLAS.csv")
+```
 
 
 

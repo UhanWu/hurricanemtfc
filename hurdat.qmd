@@ -26,6 +26,9 @@ panel$HID = na.locf(panel$HID)
 panel$HNAME = na.locf(panel$HNAME)
 
 panel = panel[!grepl("AL|EP|CP", panel$DATE), ]
+
+
+hurricanedf
 ```
 
 ```{r}
@@ -35,14 +38,6 @@ hurricanedf |>
 
 
 ```{r}
-dfhurdat <- panel |>
-  select(!c(STATUS)) |>
-  mutate(year = as.double(str_sub(DATE, 0, 4))) |>
-  mutate(HNAME = as.character(HNAME)) 
-
-
-write_csv(dfhurdat, "dfhurdat.csv")
-
 
 
 
@@ -85,9 +80,9 @@ maxwinddf <- hurricanedf |>
   filter(maxwind != -999 ) |>
   filter(maxwind != 0 )  
 
-
-  ggplot(aes(x = maxwind)) + 
-  geom_histogram(binwidth = 10, color = "white")
+# 
+#   ggplot(aes(x = maxwind)) + 
+#   geom_histogram(binwidth = 10, color = "white")
 
 
 min_value <- min(maxwinddf$maxwind)
@@ -113,8 +108,8 @@ eyeradiidf <- hurricanedf |>
 
 
 
-  ggplot(aes(x = maxEyeRadii)) + 
-  geom_histogram(binwidth = 5, color = "white")
+  # ggplot(aes(x = maxEyeRadii)) + 
+  # geom_histogram(binwidth = 5, color = "white")
 
 
 min_value <- min(eyeradiidf$maxEyeRadii)
@@ -138,8 +133,8 @@ distdf <- hurricanedf |>
   filter(maxdist != 0 ) 
 
 
-  ggplot(aes(x = maxdist)) + 
-  geom_histogram(binwidth = 20, color = "white") 
+  # ggplot(aes(x = maxdist)) + 
+  # geom_histogram(binwidth = 20, color = "white") 
 
 
 min_value <- min(distdf$maxdist)
@@ -167,8 +162,9 @@ library(dplyr)
 library(stringr)
 
 # Load Texas map data
-texas_map <- map_data("state", region = regions)
 regions <- c("texas", "louisiana")
+texas_map <- map_data("state", region = regions)
+
 
 
 # Assuming hurricanedf is your hurricane DataFrame
@@ -236,7 +232,7 @@ library(sf)
 
 counties_sf <- us_counties()
 
-
+states_of_interest <- c("TX")
 names(counties_sf) <- make.unique(names(counties_sf), sep = "_")
 
 # Proceed with filtering if duplicates are resolved
@@ -262,12 +258,335 @@ ggplot() +
 
 
 ```{r}
+library(ggplot2)
+library(sf)
+
+
+counties_sf <- us_counties()
+
+states_of_interest <- c("TX")
+names(counties_sf) <- make.unique(names(counties_sf), sep = "_")
+
+# Proceed with filtering if duplicates are resolved
+counties_filtered <- counties_sf %>%
+  filter(state_abbr %in% states_of_interest)
+# Assuming counties_filtered is an 'sf' object with appropriate CRS
+# and other data preparations are already done
+
+ggplot() +
+  geom_sf(data = counties_filtered, fill = 'lightblue', color = "black", size = 0.25, alpha = 0.5) +  # County boundaries
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(EyeRadii == 0, NA, EyeRadii)), color = "red", alpha = 0.3) +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(maxkt34 == 0, NA, maxkt34)), color = "yellow", alpha = 0.3) +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(maxkt50 == 0, NA, maxkt50)), color = "green", alpha = 0.3) +
+  geom_point(data = hurricane_plot_data, aes(x = long, y = lat, size = ifelse(maxkt64 == 0, NA, maxkt64)), color = "blue", alpha = 0.3) +
+  scale_size_continuous(name = "Wind Radii (nmi)", range = c(3, 19), limits = c(1, NA)) +
+  coord_sf() +  # Use coord_sf() to integrate sf spatial data
+  ggtitle("Hurricane Nicholas (2021) Windfield") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+```{r}
+counties_sf <- us_counties()
+
+states_of_interest <- c("TX")
+names(counties_sf) <- make.unique(names(counties_sf), sep = "_")
+
+# Proceed with filtering if duplicates are resolved
+counties_filtered <- counties_sf %>%
+  filter(state_abbr %in% states_of_interest)
+# Assuming counties_filtered is an 'sf' object with appropriate CRS
+# and other data preparations are already done
+
+nichodf <- read_csv("NICHOLAS.csv")
+
+
+hurricane_plot_nicho <- nichodf %>%
+  mutate(lat = as.double(str_sub(lat, 1, 4))) %>% # Corrected to start at 1 instead of 0
+  mutate(long = -as.double(str_sub(long, 1, 4))) |> # Corrected to start at 1 instead of 0
+  filter(lat > 25) |>
+  mutate(maxkt34 = pmax(`34kt_ne`, `34kt_se`, `34kt_sw`, `34kt_nw`)) |>
+  mutate(maxkt50 = pmax(`50kt_ne`, `50kt_sw`, `50kt_nw`, `50kt_se`)) |>
+  mutate(maxkt64 = pmax(`64kt_ne`, `64kt_se`, `64kt_sw`, `64kt_nw`)) 
+```
+
+```{r}
+
+  
+  
+  ggplot() +
+  geom_sf(data = counties_filtered, fill = 'lightblue', color = "black", size = 0.25, alpha = 0.5) +  # County boundaries
+  geom_point(data = hurricane_plot_nicho, aes(x = long, y = lat, size = ifelse(maxkt34 == 0, NA, maxkt34)), color = "yellow", alpha = 0.3) +
+  geom_point(data = hurricane_plot_nicho, aes(x = long, y = lat, size = ifelse(maxkt50 == 0, NA, maxkt50)), color = "green", alpha = 0.3) +
+  geom_point(data = hurricane_plot_nicho, aes(x = long, y = lat, size = ifelse(maxkt64 == 0, NA, maxkt64)), color = "blue", alpha = 0.3) +
+  scale_size_continuous(name = "Wind Radii (nmi)", range = c(3, 19), limits = c(1, NA)) +
+  coord_sf() +  # Use coord_sf() to integrate sf spatial data
+  ggtitle("Hurricane Nicholas (2021) Windfield") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+```{r}
+write_csv(panel, "paneldf.csv")
+```
+
+
+
+```{r}
+
+paneldf <- read_csv("paneldf.csv")
+
+paneldf |>
+  filter(STATUS == "HU") |>
+  mutate(year = as.double(str_sub(DATE, 0, 4)),
+         month = as.double(str_sub(DATE, 5, 6)),
+         day = as.double(str_sub(DATE, 7, 8))) |>
+  select(year, month) |>
+  unique() |>
+  summarise(count = n(), .by = year) |>
+  ggplot(aes(x = year, y = count)) + 
+  geom_line()
+
+
+
+paneldf |>
+  filter(STATUS == "HU") |>
+  mutate(year = as.double(str_sub(DATE, 0, 4)),
+         month = as.double(str_sub(DATE, 5, 6)),
+         day = as.double(str_sub(DATE, 7, 8))) |>
+  select(year, month) |>
+  unique() |>
+  summarise(count = n(), .by = month) |>
+  ggplot(aes(x = month, y = count)) + 
+  geom_col() +
+  scale_x_discrete(labels = c("Jan", "Feb", "Mar", 
+  ))
+```
+
+
+
+```{r}
+library(tidyverse)
+library(stringr)
+
+# Assuming paneldf is your dataframe and it has DATE and STATUS columns
+# Filter for "HU" status and extract year, month, and day from DATE
+monthly_counts <- paneldf |>
+  filter(STATUS == "HU") |>
+  mutate(year = as.double(str_sub(DATE, 0, 4)),
+         month = as.double(str_sub(DATE, 5, 6)),
+         day = as.double(str_sub(DATE, 7, 8))) |>
+  filter(year >= 1900) |>
+  summarise(countprep = n(), .by = c(month, HID)) |>
+  summarise(count = n(), .by = month)# Simplified summarise step
+
+# Create a data frame with all months (1 through 12)
+all_months <- tibble(month = 1:12)
+
+# Ensure all months are represented by left joining with the all_months dataframe
+complete_data <- all_months |>
+  left_join(monthly_counts, by = "month") |>
+  replace_na(list(count = 0)) # Replace NA counts with 0
+
+# Plot
+complete_data |> 
+  ggplot(aes(x = factor(month), y = count)) + 
+  geom_col(fill = "orange", color = "black") +
+  scale_x_discrete(labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+                   breaks = as.character(1:12)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(x = "Months", y = "Hurricane Frequencies") + 
+  theme_bw()
 
 ```
 
 
 
 
+```{r}
+summarydf <- hurricanedf |>
+  filter(PRESURE_MB!= -999 & SE_34KT != -999) |>
+  select(!c(EyeRadii, year)) |>
+  summary()
 
 
+cols <- colnames(summarydf)
+t(sapply(summarydf[cols], summary))
+```
+
+```{r}
+library(dplyr)
+library(tibble)
+
+# Assuming hurricanedf is your dataset and it has been pre-processed to remove -999 values
+processed_df <- hurricanedf |>
+  filter(PRESURE_MB != -999 & SE_34KT != -999) %>%
+  select(-POINT_TYPE, -EyeRadii)
+
+# Function to summarize numeric columns
+summarize_numeric <- function(column) {
+  c(mean = mean(column, na.rm = TRUE), 
+    median = median(column, na.rm = TRUE), 
+    non_missing = sum(!is.na(column)))
+}
+
+# Function to summarize factor columns
+summarize_factor <- function(column) {
+  c(unique_values = length(unique(column)),
+    most_frequent = names(sort(table(column), decreasing = TRUE)[1]))
+}
+
+# Apply the appropriate summarization function to each column and create a summary table
+summary_table <- processed_df %>%
+  summarise_all(~if(is.numeric(.)) summarize_numeric(.) else summarize_factor(.)) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "Summary") %>%
+  mutate(Summary = as.character(Summary)) # Convert summaries to character for uniformity
+
+# View the summary table
+print(summary_table)
+
+```
+
+```{r}
+paneldf |>
+  filter(STATUS == "HU") |>
+  mutate(year = as.double(str_sub(DATE, 0, 4)),
+         month = as.double(str_sub(DATE, 5, 6)),
+         day = as.double(str_sub(DATE, 7, 8))) |>
+  summarise(countprep = n(), .by = c(year, HID)) |>
+  ggplot(aes(x = year)) + 
+  geom_histogram(binwidth = 5, fill = "orange",color = "black") + 
+  scale_x_continuous(breaks=seq(1850, 2020, by=10)) +
+  labs(x = "Year", y = "# of Hurricanes")
+
+
+
+
+paneldf |>
+  filter(STATUS == "HU") |>
+  mutate(year = as.double(str_sub(DATE, 0, 4)),
+         month = as.double(str_sub(DATE, 5, 6)),
+         day = as.double(str_sub(DATE, 7, 8))) |>
+  filter(year >= 1900) |>
+  summarise(countprep = n(), .by = c(year, HID)) |>
+  summarise(countfinal = n(), .by = year) |>
+  ggplot(aes(x = year, y = countfinal)) +
+  geom_point(color = "black") + 
+  geom_line(color = "black") + 
+  geom_smooth(method="lm", formula= y~x, se=FALSE, color = "red") + 
+  labs(x = "year", y = "Number of Hurricanes")
+
+lmyr <- paneldf |>
+  filter(STATUS == "HU") |>
+  mutate(year = as.double(str_sub(DATE, 0, 4)),
+         month = as.double(str_sub(DATE, 5, 6)),
+         day = as.double(str_sub(DATE, 7, 8))) |>
+  filter(year >= 1900) |>
+  summarise(countprep = n(), .by = c(year, HID)) |>
+  summarise(countfinal = n(), .by = year) 
+
+
+
+model <- lm(formula = countfinal~year, data = lmyr)
+   
+   summary(model)
+   
+   
+   
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(stringr)
+
+
+
+paneldf |>
+  filter(STATUS == "HU") |>
+  mutate(year = as.double(str_sub(DATE, 1, 4)),  # Adjusted indexing to start from 1
+         month = as.double(str_sub(DATE, 5, 6)),
+         day = as.double(str_sub(DATE, 7, 8))) |>
+  filter(year >= 1900) |>
+  group_by(year, HID) |>
+  summarise(countprep = n(), .groups = "drop") |>
+  group_by(year) |>
+  summarise(countfinal = n(), .groups = "drop") |>
+  ggplot(aes(x = year, y = countfinal)) +
+  geom_point(color = "black") + 
+  geom_line(color = "black") + 
+  geom_smooth(method="lm", formula= y~x, se=FALSE, color = "red") + 
+  labs(x = "Year", y = "Number of Hurricanes") +
+  scale_x_continuous(breaks = seq(min(1900), max(2020), by = 10),  # Adjust breaks
+                     labels = seq(min(1900), max(2020), by = 10))+ # Adjust labels
+theme_bw()
+```
+```{r}
+filter(date > '2019-09-15' & date < '2019-09-25' |
+         date > '2020-07-20' & date < '2020-08-01' |
+         date > '2020-08-20' & date < '2020-09-05' |
+         date > '2020-09-10' & date < '2020-09-20' |
+         date > '2020-10-05' & date < '2020-10-20' |
+         date > '2021-09-10' & date < '2021-09-20' ) 
+
+
+TXhurprocss |>
+  summarise(maxsumdaily = max(sum), .by = c(fips_code, county, date))
+
+windspeedHUR <- hurricanedf |>
+  filter(year >= 2019) |>
+  arrange(DATE) |>
+mutate(
+    lat = as.double(str_sub(LATITUDE, 1, -2)), # Extracts all but the last character
+    long = as.double(str_sub(LONGITUDE, 1, -2)) # Extracts all but the last character
+  ) %>%
+  mutate(
+    long = if_else(str_ends(LONGITUDE, "W"), -long, long) # Assumes W is negative, E is positive
+  ) |>
+  filter(lat > 25) |>
+  mutate(maxkt34 = pmax(NE_34KT, SE_34KT, NW_34_KT, SW_34_KT)) |>
+  mutate(maxkt50 = pmax(NE_50KT, SE_50KT, NW_50_KT, SW_50_KT)) |>
+  mutate(maxkt64 = pmax(NE_64KT, SE_64KT, NW_64_KT, SW_64_KT)) |>
+  select(HID, year, lat, long, HNAME, DATE, WINDSPEED_KT, maxkt34, maxkt50, maxkt64) |>
+  group_by(HID, year, HNAME, DATE) |>
+  filter(WINDSPEED_KT == max(WINDSPEED_KT)) |>
+  filter(maxkt34 == max(maxkt34)) |>
+  ungroup()
+
+
+
+TXHURinfo <- windspeedHUR |>
+  summarise(
+    avglat = mean(lat),
+    avglong = mean(long),
+    .by = c(HID, year, HNAME, DATE, WINDSPEED_KT, maxkt34, maxkt50, maxkt64)
+  ) |>
+  filter(avglat >= 25.8, avglat <= 36.5, avglong >= -106.6, avglong <= -93.5) |>
+  mutate(date = ymd(DATE)) |>
+  select(!DATE)
+
+
+
+  
+  
+  
+  
+```
+
+```{r}
+
+centercounty <- county_centers |>
+  filter(state_name == "Texas") |>
+  mutate(fips_code = as.double(fips)) |>
+  select(fips_code, population, latitude, longitude)
+
+combineTXfinal <- TXhurprocss |>
+  summarise(maxsumdaily = max(sum), .by = c(fips_code, county, date)) |>
+  merge(centercounty) |>
+  merge(TXHURinfo) 
+  
+
+combineTXfinal |>
+  arrange(desc(maxsumdaily))
+```
 
