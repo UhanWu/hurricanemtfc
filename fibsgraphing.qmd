@@ -21,28 +21,40 @@ library(urbnmapr)
 #   Hurricane Nicholas: filter(date > '2021-09-10' & date < '2021-09-20') |>
 
 data_df <- TXhurprocss |>
-  filter(date > '2021-02-13' & date < '2021-02-20' |
-           date > '2021-09-10' & date < '2021-09-20' |) |>
+  filter(date > '2021-02-13' & date < '2021-02-20' ) |>
   merge(TXpop) |>
   filter(sum < population) |>
-  summarise(impactPOP = sum(sum)/population, .by = c(county, fips_code)) |>
+  filter(sum == max(sum), .by = c(fips_code, date)) |>
+  summarise(impactPOP = max(sum)/population, .by = c(county, fips_code)) |>
   unique() |>
   mutate(county_fips = as.character(fips_code))
 
 
-data_df %>% 
+reredf |>
+  mutate(county_fips = as.character(fips_code)) |>
   left_join(counties, by = "county_fips") %>% 
   filter(state_name =="Texas") %>% 
-  ggplot(mapping = aes(long, lat, group = group, fill = impactPOP)) +
+  ggplot(mapping = aes(long, lat, group = group, fill = recover)) +
   geom_polygon(color = "#ffffff", size = .25) +
   scale_fill_gradientn(colors = c("lightblue", "red"),
                        guide = guide_colorbar(title.position = "top")) +
   coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
   theme(legend.title = element_text(),
         legend.key.width = unit(.5, "in")) +
-  labs(fill = "Severity Matrix ")
+  labs(fill = "Resilience ", x = "Longitude", y = "Latitude")
 
-
+centercounty %>% 
+  mutate(county_fips = as.character(fips_code)) |>
+  left_join(counties, by = "county_fips") %>% 
+  filter(state_name =="Texas") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = distanceCoast)) +
+  geom_polygon(color = "#ffffff", size = .25) +
+  scale_fill_gradientn(colors = c("lightblue", "red"),
+                       guide = guide_colorbar(title.position = "top")) +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme(legend.title = element_text(),
+        legend.key.width = unit(.5, "in")) +
+  labs(fill = "Distance Coast ")
 
 
 ```
@@ -123,23 +135,21 @@ plotfrequencyHUR %>%
   coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
   theme(legend.title = element_text(),
         legend.key.width = unit(0.6, "in")) +
-  labs(fill = "# Hurricane Hit", x = "Longitude", y = "Latitude") + 
+  labs(fill = "Avg Hit per year", x = "Longitude", y = "Latitude") + 
   theme_bw()
 ```
 
 ```{r}
+plotfrequencyHUR |>
+```
+
+
+
+
+```{r}
 TXpop <- read_csv("TXPOP.csv")
 
-data_df <- TXhurprocss |>
-  filter(sum > 1000) |>
-  filter(date > '2019-09-15' & date < '2019-09-25' |
-         date > '2020-07-20' & date < '2020-08-01' |
-         date > '2020-08-20' & date < '2020-09-05' |
-         date > '2020-09-10' & date < '2020-09-20' |
-         date > '2020-10-05' & date < '2020-10-20' |
-         date > '2021-09-10' & date < '2021-09-20' ) 
-
-|>
+data_df <- combineTXtest
   merge(TXpop) |>
   filter(sum < population) |>
   summarise(impactPOP = sum(max(sum))/population, .by = c(county, fips_code)) |>
@@ -198,4 +208,55 @@ plotBehaviour(st, ss$PAM_MSW)
 
 
 
+```{r}
+reredf |>
+  mutate(resilience = resilience/(60*60)) |>
+  mutate(county_fips = as.character(fips_code)) |>
+  left_join(counties, by = "county_fips") %>% 
+  filter(state_name =="Texas") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = resilience)) +
+  geom_polygon(color = "#ffffff", size = .25) +
+  scale_fill_gradientn(colors = c("yellow", "purple"),
+                       guide = guide_colorbar(title.position = "top")) +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme(legend.title = element_text(),
+        legend.key.width = unit(.5, "in")) +
+  labs(fill = "Resilience ", x = "Longitude", y = "Latitude")
+
+
+ULTIMATEdata
+
+reredf |>
+  mutate(recover = recover/(60*60)) |>
+  mutate(county_fips = as.character(fips_code)) |>
+  left_join(s, by = "county_fips") %>% 
+  filter(state_name =="Texas") %>% 
+  ggplot(mapping = aes(long, lat, group = group, fill = recover)) +
+  geom_polygon(color = "#ffffff", size = .25) +
+  scale_fill_gradientn(colors = c("yellow", "purple"),
+                       guide = guide_colorbar(title.position = "top")) +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme(legend.title = element_text(),
+        legend.key.width = unit(.5, "in")) +
+  labs(fill = "Recovery ", x = "Longitude", y = "Latitude")
+
+
+reredf |>
+  select(fips_code) |>
+merge(ULTIMATEdata, all = TRUE) |>
+  select(fips_code, max_rateincrease, population) |>
+  mutate(county_fips = as.character(fips_code)) |>
+  left_join(counties, by = "county_fips") |>
+  filter(state_name =="Texas") |>
+  ggplot(mapping = aes(long, lat, group = group, fill = max_rateincrease/population)) +
+  geom_polygon(color = "#ffffff", size = .25) +
+  scale_fill_gradientn(colors = c("yellow", "purple"),
+                       guide = guide_colorbar(title.position = "top")) +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme(legend.title = element_text(),
+        legend.key.width = unit(.5, "in")) +
+  labs(fill = "Stability/Pop.", x = "Longitude", y = "Latitude")
+
+
+```
 

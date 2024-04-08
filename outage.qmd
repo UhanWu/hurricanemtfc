@@ -154,6 +154,7 @@ arrange(desc(sum))
 ```{r}
 write_csv(processALL, "FLprocessALL.csv")
 library(tidyverse)
+
 processALL <- read_csv("processALL.csv")
 TXhurprocss <- processALL |>
   filter(state == "Texas")
@@ -161,26 +162,28 @@ TXhurprocss <- processALL |>
 
 ```{r}
 TXhurprocss |>
-  filter(date > '2021-02-13' & date < '2021-02-20') |>
+  filter(date > '2021-02-14' & date < '2021-02-20') |>
   filter(county == "Harris" | 
          county == "Fort Bend" |
          county == "Brazoria" |
          county == "Galveston" ) |>
    merge(TXpop) |>
   filter(sum < population) |>
-  summarise(impactPOP = sum(sum)/population, .by = c(county, state, date, time)) |>
+  summarise(impactPOP = max(sum)/population, .by = c(county, state, date, time)) |>
   mutate(date = as.Date(date)) |>
   arrange(date) |>
   mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
   ggplot(aes(x = datetime, y = impactPOP, color = county)) + 
   geom_line() +
-  facet_wrap(~county)
+  facet_wrap(~county) + 
+  labs(x = "Date", y = "Outages per Population")
 ```
 ```{r}
 fipsTXvulnerM <- TXhurprocss |>
   filter(date > '2021-02-13' & date < '2021-02-20') |>
   merge(TXpop) |>
-  summarise(impactPOP = sum(sum), .by = c(county, fips_code)) |>
+  filter(sum < population) |>
+  summarise(impactPOP = max(sum)/population, .by = c(county, fips_code)) |>
   unique()
   
 
@@ -188,10 +191,7 @@ fipsTXvulnerM <- TXhurprocss |>
 write_csv(fipsTXvulnerM, "fipsTXvulnerM.csv")
 
 TXhurprocss |>
-  summarise(counttest = n(), .by = c(fips_code))
-
-
-
+  summarise(counttest = n(), .by = c(fips_code)) |>
   mutate(date = as.Date(date)) |>
   arrange(date) |>
   mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
@@ -201,6 +201,9 @@ TXhurprocss |>
 ```
 
 
+```{r}
+
+```
 
 
 
@@ -221,7 +224,8 @@ TXhurprocss |>
   mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
   ggplot(aes(x = datetime, y = hurimpactPOP, color = county)) + 
   geom_line() +
-  facet_wrap(~county)
+  facet_wrap(~county)  + 
+  labs(x = "Date", y = "Outages per Population")
 ```
 ```{r}
 #Testing
@@ -239,7 +243,7 @@ TXhurprocss |>
   arrange(desc(sum)) |>
   merge(TXpop) |>
   filter(sum < population) |>
-  summarise(hurimpactPOP = sum(sum)/population, .by = c(county, state, date, time)) |>
+  summarise(hurimpactPOP = sum(sum), .by = c(county, state, date, time)) |>
   mutate(date = as.Date(date)) |>
   arrange(date) |>
   mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) |>
@@ -366,6 +370,10 @@ freqTXhur |>
 
 
 ```{r}
+
+TXhurprocss |>
+  summarise(maxsumdaily = max(sum), .by = c(fips_code, county, date)) 
+
 countieslistTX <- TXhurprocss |>
   summarise(hi = 0, .by = c(county, fips_code))
 ```
@@ -376,8 +384,6 @@ TXhurprocss |>
   filter(date > "2017-08-20") |>
   filter(date < "2017-09-10") |>
   group_by(county)
-
-
 
 ```
 
@@ -393,18 +399,101 @@ TXhurprocss |>
   merge(centercounty)
   
 ```
+```{r}
+TXhurprocss |>
+  arrange(date)
+```
+
+
+```{r}
+library(tidyverse)
+library(hurricaneexposuredata)
+
+lgdf <- read_csv("lgdf.csv")
+TXpop <- read_csv("TXPOP.csv")
+areadf <- lgdf |>
+  select(AREA, fips_code) |>
+  unique()
+
+windimpact <- lgdf |>
+  summarise(windspeedinfluence = max(windspeedinfluence), .by = fips_code) |>
+  unique()
+
+dataoutage <- TXhurprocss |>
+  filter(date > '2021-02-13' & date < '2021-03-01') 
+  
+TXpop <- TXpop |>
+  mutate(population = Estimates) |>
+  mutate(county = str_remove(Counties, ".")) |>
+  mutate(county = gsub(" County, Texas", "", county)) 
+
+predatamange <- dataoutage |>
+  merge(TXpop) |>
+  select(fips_code, county, state, sum, population, date, time) |>
+  filter(sum <= population)
+  
+
+ULTIMATEdata <- predatamange |>
+  mutate(datetime = as.POSIXct(paste(date, time), 
+                               format = "%Y-%m-%d %H:%M:%S")) |>
+  mutate(vulcounty = sum/population, .by = c(county, fips_code))  |>
+  arrange(datetime) |>
+  filter(sum >= 1000) |>
+  mutate(maxvulcounty = max(sum)/population, .by = c(county, fips_code))  |>
+  mutate(maxdate = ifelse(vulcounty == maxvulcounty, datetime, NA), 
+         .by = c(county, fips_code)) |>
+  mutate(maxdate = max(maxdate, na.rm = TRUE),
+         .by = c(county, fips_code)) |>
+  mutate(maxdate = as.POSIXct(maxdate),
+         .by = c(county, fips_code)) |>
+  mutate(date_start = min(datetime),
+         date_end = max(datetime),
+         .by = c(county, fips_code)) |>
+  summarise(resilience = maxdate - date_start, 
+            recover = date_end- maxdate, 
+            vulnerability = maxvulcounty,
+            outagesmax = max(sum),
+            population = population,
+            max_rateincrease = max(diff(sum) / as.numeric(diff(datetime)), na.rm = TRUE),
+            .by = c(county, fips_code)) |>
+  mutate(resilience2 = as.double(resilience)) |>
+  select(!resilience2) |>
+  filter(outagesmax > 0.01*population) |>
+  filter(resilience != 0 & recover != 0) |>
+  merge(areadf) |>
+  unique() |>
+  arrange(county)
+
+
+```
 
 
 
+```{r}
+library(dplyr)
+
+df <- predatamange %>%
+  mutate(datetime = as.POSIXct(paste(date, time), format = "%Y-%m-%d %H:%M:%S")) %>%
+  mutate(vulcounty = sum / population, .by = c(county, fips_code)) %>%
+  arrange(datetime) %>%
+  filter(sum >= 0.01 * population) %>%
+  mutate(maxvulcounty = max(sum) / population, .by = c(county, fips_code)) %>%
+  mutate(maxdate = if_else(any(!is.na(vulcounty)), max(datetime[vulcounty == maxvulcounty]), NA_real_), .by = c(county, fips_code)) %>%
+  mutate(maxdate = as.POSIXct(maxdate), .by = c(county, fips_code)) %>%
+  mutate(date_start = case_when(
+    sum > 0.1 * population & datetime <= maxdate ~ datetime,
+    TRUE ~ as.POSIXct(NA, origin = "1970-01-01")
+  )) %>%
+  mutate(date_end = if_else(datetime > maxdate & lead(datetime) > maxdate & sum <= 0.1 * population, datetime, as.POSIXct(NA, origin = "1970-01-01")))
+
+# Print the updated dataframe
+print(df)
 
 
-
-
-
-
-
-
-
+```
+```{r}
+ULTIMATEdata
+```
 
 
 

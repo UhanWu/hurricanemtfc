@@ -36,7 +36,6 @@ hurricanedf |>
   filter(HNAME == "IDA")
 ```
 
-
 ```{r}
 
 
@@ -150,7 +149,6 @@ lines(density(distdf$maxdist), col = "red")
 
 ```
 
-
 ```{r}
 recenthurdf
 ```
@@ -224,7 +222,6 @@ ggplot() +
 
 ```
 
-
 ```{r warning=FALSE}
 library(ggplot2)
 library(sf)
@@ -255,7 +252,6 @@ ggplot() +
 
 
 ```
-
 
 ```{r}
 library(ggplot2)
@@ -330,8 +326,6 @@ hurricane_plot_nicho <- nichodf %>%
 write_csv(panel, "paneldf.csv")
 ```
 
-
-
 ```{r}
 
 paneldf <- read_csv("paneldf.csv")
@@ -362,8 +356,6 @@ paneldf |>
   scale_x_discrete(labels = c("Jan", "Feb", "Mar", 
   ))
 ```
-
-
 
 ```{r}
 library(tidyverse)
@@ -399,9 +391,6 @@ complete_data |>
   theme_bw()
 
 ```
-
-
-
 
 ```{r}
 summarydf <- hurricanedf |>
@@ -494,6 +483,182 @@ model <- lm(formula = countfinal~year, data = lmyr)
    
    
 ```
+```{r}
+paneldf |>
+  filter(STATUS == "HU") |>
+  mutate(year = as.double(str_sub(DATE, 0, 4)),
+         month = as.double(str_sub(DATE, 5, 6)),
+         day = as.double(str_sub(DATE, 7, 8))) |>
+  filter(year >= 1900) |>
+  summarise(countprep = n(), .by = c(year, HID)) |>
+  summarise(countfinal = n(), .by = year)
+```
+```{r}
+
+# "Harris", "Fort Bend", "Galveston"
+
+TXhurprocss %>%
+  filter(state == "Texas") %>%
+  filter(county %in% c("Harris")) %>%
+  merge(TXpop) %>%
+  reframe(outagedaily = max(sum) / population, .by = c(date, county)) %>%
+  unique() %>%
+  mutate(interval = cut(outagedaily, breaks = c(0, seq(0.01, 0.10, by = 0.001)), 
+                        labels = paste0(seq(0, 0.09, by = 0.001), " - ", seq(0.01, 0.10, by = 0.001)))) %>%
+  group_by(interval) %>%
+  summarise(probability = n() / nrow(.)) %>%
+  ggplot(aes(x = interval, y = probability)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(x = "Outage Daily Interval", y = "Probability") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+TXhurprocss %>%
+  filter(state == "Texas") %>%
+  filter(county %in% c("Harris")) %>%
+  merge(TXpop) %>%
+  reframe(outagedaily = max(sum) / population, .by = c(date, county)) %>%
+  unique() %>%
+  mutate(interval = cut(outagedaily, breaks = c(0, seq(0.01, 0.10, by = 0.01)), 
+                        labels = paste0(seq(0, 0.09, by = 0.01), " - ", seq(0.01, 0.10, by = 0.01)))) %>%
+  group_by(interval) %>%
+  summarise(probability = n() / nrow(.)) %>%
+  mutate(probability_percentage = scales::percent(probability)) %>%
+  ggplot(aes(x = interval, y = 1)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  geom_text(aes(label = probability_percentage), vjust = -0.5, size = 3.5) +
+  labs(x = "Outage Daily Interval", y = "Probability") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+library(dplyr)
+library(ggplot2)
+
+
+
+
+TXhurprocss %>%
+  filter(sum > 0) |>
+  filter(state == "Texas") %>%
+  filter(county %in% c("Harris")) %>%
+  merge(TXpop) %>%
+  reframe(outagedaily = max(sum) / population, .by = c(date, county)) %>%
+  unique() %>%
+  mutate(interval = cut(outagedaily, breaks = 35)) %>%  # Adjust the number of breaks as needed
+  reframe(probability = n() / nrow(.), .by = interval) %>%
+  mutate(probability_percentage = scales::percent(probability))
+
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+TXhurprocss %>%
+  filter(sum > 1000) %>%
+  filter(state == "Texas") %>%
+  filter(county %in% c("Brazoria")) %>%
+  merge(TXpop) %>%
+  reframe(outagedaily = max(sum), .by = c(date, county)) %>%
+  unique() %>%
+  mutate(interval = cut(outagedaily, breaks = quantile(outagedaily, probs = seq(0, 1, by = 0.1), na.rm = TRUE))) %>%
+  reframe(probability = n() / nrow(.), .by = interval) %>%
+  mutate(percentage_Brazoria = scales::percent(probability)) |>
+  select(!probability)
+
+TXhurprocss %>%
+  filter(sum > 1000) %>%
+  filter(state == "Texas") %>%
+  filter(county %in% c("Harris")) %>%
+  merge(TXpop) %>%
+  reframe(outagedaily = max(sum), .by = c(date, county)) %>%
+  unique() %>%
+  mutate(interval = cut(outagedaily, breaks = quantile(outagedaily, probs = seq(0, 1, by = 0.1), na.rm = TRUE))) %>%
+  reframe(probability = n() / nrow(.), .by = interval) %>%
+  mutate(percentage_Harris = scales::percent(probability)) |>
+  select(!probability)
+
+TXhurprocss %>%
+  filter(sum > 1000) %>%
+  filter(state == "Texas") %>%
+  filter(county %in% c("Fort Bend")) %>%
+  merge(TXpop) %>%
+  reframe(outagedaily = max(sum), .by = c(date, county)) %>%
+  unique() %>%
+  mutate(interval = cut(outagedaily, breaks = quantile(outagedaily, probs = seq(0, 1, by = 0.1), na.rm = TRUE))) %>%
+  reframe(probability = n() / nrow(.), .by = interval) %>%
+  mutate(percentage_FortBend = scales::percent(probability)) |>
+  select(!probability)
+
+TXhurprocss %>%
+  filter(sum > 0) %>%
+  filter(state == "Texas") %>%
+  filter(county %in% c("Galveston")) %>%
+  merge(TXpop) %>%
+  reframe(outagedaily = max(sum), .by = c(date, county)) %>%
+  unique() %>%
+  mutate(interval = cut(outagedaily, breaks = quantile(outagedaily, probs = seq(0, 1, by = 0.1), na.rm = TRUE))) %>%
+  reframe(probability = n() / nrow(.), .by = interval) %>%
+  mutate(percentage_Galveston = scales::percent(probability)) |>
+  select(!probability)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
+```{r}
+library(dplyr)
+
+# Load your dataset (TXhurprocss and TXpop assumed to be loaded)
+
+# Filter, merge, and compute intervals
+data <- TXhurprocss %>%
+  filter(sum > 0) %>%
+  filter(state == "Texas") %>%
+  filter(county %in% c("Harris")) %>%
+  merge(TXpop) %>%
+  reframe(outagedaily = max(sum), .by = c(date, county)) %>%
+  unique() %>%
+  mutate(interval = cut(outagedaily, breaks = quantile(outagedaily, probs = seq(0, 1, by = 0.1), na.rm = TRUE)))
+
+# Compute probability
+data <- data %>%
+  group_by(interval) %>%
+  summarise(probability = n() / nrow(.)) %>%
+  mutate(midpoint = as.numeric(gsub("\\((.*),.*", "\\1", as.character(interval))))
+
+# Calculate the expected value
+expected_value <- sum(data$midpoint * data$probability, na.rm = TRUE)
+
+# Print the expected value
+print(expected_value)
+
+
+```
+
+
+
+
+
+
+
+
+
 
 ```{r}
 library(ggplot2)
@@ -521,6 +686,7 @@ paneldf |>
                      labels = seq(min(1900), max(2020), by = 10))+ # Adjust labels
 theme_bw()
 ```
+
 ```{r}
 filter(date > '2019-09-15' & date < '2019-09-25' |
          date > '2020-07-20' & date < '2020-08-01' |
@@ -578,15 +744,369 @@ TXHURinfo <- windspeedHUR |>
 centercounty <- county_centers |>
   filter(state_name == "Texas") |>
   mutate(fips_code = as.double(fips)) |>
-  select(fips_code, population, latitude, longitude)
+  select(county_name, fips_code, population, latitude, longitude) |>
+  mutate(distanceCoast = c(218, 503, 145, 2, 472, 681, 112, 57, 647, 172,
+                           126, 477, 41, 196, 133, 183, 477, 264, 359, 16,
+                           112, 420, 615, 23, 302, 111, 199, 135, 1, 369,
+                           14, 320, 706, 321, 656, 1, 214, 585, 476, 603,
+                           374, 325, 371, 628, 73, 144, 304, 310, 433, 218,
+                           549, 435, 338, 549, 455, 802, 343, 500, 690, 376,
+                           380, 55, 522, 145, 653, 49, 346, 465, 242, 300, 
+                           387, 318, 188, 404, 95, 438, 585, 527, 28, 340,
+                           217, 134, 529, 5, 510, 212, 422, 40, 92, 708,
+                           422, 264, 84, 124, 603, 616, 269, 790, 558, 56,
+                           15, 263, 794, 453, 154, 733, 265, 47, 266, 580,
+                           324, 347, 165, 444, 417, 356, 739, 357, 412, 20,
+                           69, 462, 34, 52, 34, 314, 414, 69, 318, 170,
+                           14, 488, 202, 260, 513, 220, 8, 479, 402, 616,
+                           223, 107, 73, 115, 170, 34, 210, 780, 57, 212, 
+                           512, 561, 527, 279, 222, 80, 131, 291, 457, 249,
+                           17, 189, 146, 285, 457, 148, 267, 428, 450, 50,
+                           774, 326, 566, 171, 259, 60, 413, 4, 793, 734,
+                           30, 369, 222, 360, 676, 415, 99, 708, 413, 326,
+                           697, 385, 209, 387, 484, 15, 727, 150, 346, 350,
+                           232, 119, 142, 79, 9, 253, 324, 455, 393, 181, 
+                           816, 256, 303, 80, 386, 396, 465, 299, 640, 345,
+                           388, 354, 545, 429, 340, 347, 154, 128, 84, 289,
+                           409, 183, 246, 296, 21, 102, 53, 470, 82, 97,
+                           55, 678, 494, 532, 20, 166, 99, 497, 395, 305,
+                           558, 418, 94, 161)) |>
+  merge(plotfrequencyHUR) |>
+  select(!c(fips, frequency, hi))
+
+
+vulnerbaility <- countieslistTX |>
+  merge(fipsTXvulnerM, all = T) 
+
+  
+powerplantnum <- countieslistTX |>
+  mutate(County = county) |>
+  merge(dfdeficit, all = T) |>
+  select(!c( hi)) |>
+  mutate(totalpower = ifelse(is.na(totalpower), 0, totalpower),
+         count = ifelse(is.na(count), 0, count)) 
+
+gdpTXcounty <- gdpTXcounty |>
+  mutate(fips_code = as.double(fips))
+
+reredf <- countieslistTX |>
+  merge(rere, all = T) |>
+  select(!c( hi)) |>
+  mutate(resilience = as.double(resilience),
+         recover = as.double(recover)) |>
+  mutate(resilience = ifelse(resilience == 0, NA, resilience),
+         recover = ifelse(recover == 0, NA, recover))
+
 
 combineTXfinal <- TXhurprocss |>
+  merge(centercounty) |>
+  filter(sum < population) |>
   summarise(maxsumdaily = max(sum), .by = c(fips_code, county, date)) |>
   merge(centercounty) |>
-  merge(TXHURinfo) 
-  
-
-combineTXfinal |>
-  arrange(desc(maxsumdaily))
+  merge(reredf) |>
+  merge(TXHURinfo) |>
+  merge(vulnerbaility, all = T) |> 
+  merge(powerplantnum) |>
+  merge(gdpTXcounty) |>
+  merge(nridf) |>
+  select(!hi)
 ```
 
+```{r}
+combineTXtest <- combineTXfinal |>
+  mutate(maxsumdaily = if_else(is.na(maxsumdaily), 0, maxsumdaily)) |>
+  filter(maxsumdaily == max(maxsumdaily), .by = c(HID, fips_code))
+  
+
+
+```
+
+```{r}
+vulnerbaility |>
+  arrange(desc(impactPOP))
+```
+
+```{r}
+write_csv(combineTXfinal, "lgprepDFFINAL.csv" )
+
+combineTXfinal <- read_csv("combineTXfinal.csv")
+
+library(dplyr)
+library(geosphere)
+
+lgdf <- combineTXtest %>%
+  select(!population) |>
+  merge(ULTIMATEdata, all = TRUE) |>
+  rowwise() %>%
+  mutate(duration = resilience + recover) |>
+  mutate(distance = distHaversine(c(longitude, latitude), c(avglong, avglat)) / 1852) %>%
+  ungroup() |>
+  mutate(eyeradii = maxkt64/2) |>
+  mutate(slope64 = (WINDSPEED_KT - 64)/(eyeradii - maxkt64), intercept64 = WINDSPEED_KT-slope64*eyeradii) |>
+  mutate(slope50 = (64 - 50)/(maxkt64 - maxkt50), intercept50 = 64-slope50*maxkt64) |>
+  mutate(slope34 = (50 - 34)/(maxkt50 - maxkt34), intercept34 = 50-slope34*maxkt50) |>
+  mutate(windspeedinfluence = case_when(distance < eyeradii ~ WINDSPEED_KT ,
+                                        distance > eyeradii & distance < maxkt64 ~ distance*slope64 + intercept64,
+                                        distance > maxkt64 & distance < maxkt50 ~ distance*slope50 + intercept50,
+                                        distance > maxkt50 & distance < maxkt34 ~ distance*slope34 + intercept34,
+                                        distance > maxkt34 ~ 0)) |>
+  mutate(maxsumdaily2 = maxsumdaily/population) |>
+  select(county, fips_code, maxsumdaily, vulnerability, resilience, recover, population, AREA, windspeedinfluence, max_rateincrease)
+
+
+lgdfnew <- lgdf
+
+write_csv(lgdfnew, "lgdfnew.csv")
+
+```
+
+```{r}
+lgprepDFFINAL.csv
+
+
+LGDFtest <- lgdfFINAL |>
+  mutate(ab = max_rateincrease*windspeedinfluence) |>
+  mutate(cd = vulnerability*resilience ) |>
+  mutate(efg = vulnerability * population * windspeedinfluence) |>
+  mutate(stability = max_rateincrease/population)
+
+lgdfFINAL <- lgdfnew |>
+  drop_na()
+```
+
+```{r}
+model1 <- lm(LGDFtest, formula = maxsumdaily ~  efg  + max_rateincrease + 
+               recover )
+
+
+               
+
+
+model2 <- gam(lgdf, formula = maxsumdaily2 ~  windspeedinfluence +  powergridstrength  + 
+                resilience + recover, family = gaussian )
+
+summary(model1)
+
+AIC(model2)
+BIC(model2)
+
+# For logistic regression, assuming binary response variable
+anova(model2, test = "Chisq")
+
+lgdfnew <- lgdf
+
+
+```
+
+```{r}
+
+
+write_(lgdfFINAL, "lgdfFINAL.csv")
+
+txt
+
+
+
+write.table(lgdfFINAL, "data.txt", append = FALSE, sep = " ", dec = ".", row.names = TRUE, col.names = TRUE)
+
+```
+
+
+```{r}
+lgdf <- read_csv("lgdf.csv")
+```
+
+```{r}
+vulnerbaility
+
+reredf
+
+
+```
+
+```{r}
+library(rstanarm)
+model3 <- stan_glm(lgdf, formula = maxsumdaily2 ~  windspeedinfluence +  powergridstrength  + resilience + recover, family = gaussian)
+
+summary(model3)
+
+
+sensitivity1 <- lgdf |>
+  filter(windspeedinfluence != 0) |>
+  filter(fips_code == 48201 | fips_code == 48039 | fips_code == 48047) |>
+  filter(windspeedinfluence == max(windspeedinfluence), .by = fips_code) 
+
+|>
+  mutate(windspeedinfluence10p = windspeedinfluence * 1.1, windspeedinfluence10n = windspeedinfluence * 0.9) |>
+  mutate(powergridstrength10p = powergridstrength * 1.1, powergridstrength10n = powergridstrength * 0.9)  |>
+  mutate(resilience10p = resilience * 1.1, resilience10n = resilience * 0.9) |>
+  mutate(recover10p = recover * 1.1, recover10n = recover * 0.9)  |>
+  
+  mutate(one_p = -1.734e-03 + 3.096e-03*windspeedinfluence10p + 
+           5.781e-02*powergridstrength + -1.760e-08*resilience + 2.496e-08*recover) |>
+  mutate(one_n = -1.734e-03 + 3.096e-03*windspeedinfluence10n + 
+         5.781e-02*powergridstrength + -1.760e-08*resilience + 2.496e-08*recover) |>
+  
+  mutate(two_p = -1.734e-03 + 3.096e-03*windspeedinfluence + 
+         5.781e-02*powergridstrength10p + -1.760e-08*resilience + 2.496e-08*recover) |>
+  mutate(two_n = -1.734e-03 + 3.096e-03*windspeedinfluence + 
+         5.781e-02*powergridstrength10n + -1.760e-08*resilience + 2.496e-08*recover) |>
+  
+  mutate(three_p = -1.734e-03 + 3.096e-03*windspeedinfluence + 
+         5.781e-02*powergridstrength + -1.760e-08*resilience10p + 2.496e-08*recover) |>
+  mutate(three_n = -1.734e-03 + 3.096e-03*windspeedinfluence + 
+         5.781e-02*powergridstrength + -1.760e-08*resilience10n + 2.496e-08*recover) |>
+  
+  mutate(four_p = -1.734e-03 + 3.096e-03*windspeedinfluence + 
+         5.781e-02*powergridstrength + -1.760e-08*resilience + 2.496e-08*recover10p) |>
+  mutate(four_n = -1.734e-03 + 3.096e-03*windspeedinfluence + 
+         5.781e-02*powergridstrength + -1.760e-08*resilience + 2.496e-08*recover10n) |>
+  
+  mutate(allp = -1.734e-03 + 3.096e-03*windspeedinfluence10p + 
+         5.781e-02*powergridstrength10p + -1.760e-08*resilience10p + 2.496e-08*recover10p) |>
+  
+  mutate(alln = -1.734e-03 + 3.096e-03*windspeedinfluence10n + 
+         5.781e-02*powergridstrength10n + -1.760e-08*resilience10n + 2.496e-08*recover10n) |>
+  
+  mutate(orginal = -1.734e-03 + 3.096e-03*windspeedinfluence + 
+         5.781e-02*powergridstrength + -1.760e-08*resilience + 2.496e-08*recover) |>
+  select(fips_code, orginal, one_p, one_n, two_p, two_n, three_p, three_n, four_p, four_n, allp, alln) 
+
+
+#Dallas - 48113
+#Harris - 48201
+#Tarrant - 48439
+
+#Harris - 48201
+#Brazoria - 48039
+#Galveston - 48047
+
+
+sensitivity1 |>
+  mutate(one_p = (one_p-orginal)*100/orginal) |>
+  mutate(one_n = (one_n-orginal)*100/orginal) |>
+  mutate(two_p = (two_p-orginal)*100/orginal) |>
+  mutate(two_n = (two_n-orginal)*100/orginal) |>
+  mutate(three_p = (three_p-orginal)*100/orginal) |>
+  mutate(three_n = (three_n-orginal)*100/orginal) |>
+  mutate(four_p = (four_p-orginal)*100/orginal) |>
+  mutate(four_n = (four_n-orginal)*100/orginal) |>
+  mutate(allp = (allp - orginal)*100/orginal) |>
+  mutate(alln = (alln - orginal)*100/orginal)
+  
+
+counties
+
+summary(model1)
+
+-1.734e-03
+3.096e-03
+5.781e-02
+-1.760e-08
+-2.496e-08
+```
+```{r}
+alexsensitivity <- lgdf |>
+  filter(windspeedinfluence != 0) |>
+  filter(fips_code == 48201 | fips_code == 48039 | county == "Galveston" | fips_code == 48157) |>
+  filter(windspeedinfluence == max(windspeedinfluence), .by = fips_code) |>
+  mutate(recover = as.double(recover)) |>
+  select(county, fips_code, maxsumdaily, vulnerability, population, windspeedinfluence, max_rateincrease, recover)
+
+
+write_csv(alexsensitivity, "alexsensitivity.csv")
+```
+
+```{r}
+
+lgdfcover <- lgdf |>
+  drop_na()
+
+insurrancecover <- lgdf |>
+  mutate(maxVULN = max(lgdfcover$vulnerability)) |>
+  filter(county == "Brazoria" | county == "Fort Bend" | county == "Galveston" | county == "Harris") |>
+  select(county, fips_code, vulnerability, maxVULN) |>
+  unique()
+
+coverageinsurrancedf <- TXhurprocss |>
+  filter(county == "Brazoria" | county == "Fort Bend" | county == "Galveston" | county == "Harris") |>
+  filter(date > '2021-09-11' & date < '2021-09-20') |>
+  arrange(desc(date)) |>
+  mutate(datetime = as.POSIXct(paste(date, time), 
+                               format = "%Y-%m-%d %H:%M:%S")) |>
+  arrange(datetime) |>
+  filter(sum >= 1000) |>
+  mutate(date_start = min(datetime),
+         date_end = max(datetime),
+         .by = c(county, fips_code)) |>
+  reframe(duration = date_end - date_start, .by = c(county, fips_code)) |>
+  unique() |>
+  mutate(duration = as.numeric(duration)) |>
+  merge(insurrancecover)
+  
+
+coverageinsurrancedf |>
+  mutate(coverageDay = (vulnerability + duration)/(1.7*(maxVULN + duration))) |>
+  mutate(coverageHour = (vulnerability + duration*24)/(1.7*(maxVULN + duration*24))) |>
+  mutate(coverageMinute = (vulnerability + duration*24*60)/(1.7*(maxVULN + duration*24*60)))
+
+write_csv(coverageinsurrancedf, "coverageinsurrancedf.csv")
+
+```
+
+
+```{r}
+summary(model1)
+```
+
+```{r}
+library(dplyr)
+library(broom)
+
+# Assuming 'lgdf' is your dataframe and it's already loaded in R environment.
+
+# Perform the operations as per the provided snippet
+analysis_df <- lgdf %>%
+  select(fips_code, maxsumdaily2, windspeedinfluence, powergridstrength, resilience, recover) %>%
+  filter(windspeedinfluence != 0) %>%
+  filter(fips_code == 48201 | fips_code == 48039 ) %>%
+  group_by(fips_code) %>%
+  filter(windspeedinfluence == max(windspeedinfluence)) %>%
+  mutate(windspeedinfluence10p = windspeedinfluence * 1.1, 
+         windspeedinfluence10n = windspeedinfluence * 0.9,
+         powergridstrength10p = powergridstrength * 1.1, 
+         powergridstrength10n = powergridstrength * 0.9,
+         resilience10p = resilience * 1.1, 
+         resilience10n = resilience * 0.9,
+         recover10p = recover * 1.1, 
+         recover10n = recover * 0.9) %>%
+  ungroup() # Ungroup data for further analysis
+
+# Fit the linear model to the original data
+original_model <- lm(maxsumdaily2 ~ windspeedinfluence + powergridstrength + resilience + recover, data=lgdf)
+
+# Tidy the original model's output
+tidy_original_model <- tidy(original_model)
+
+# Print the tidy model's output
+print(tidy_original_model)
+
+# Apply the changes to the dataframe for sensitivity analysis
+# For example, increasing the 'windspeedinfluence' by 10%
+lgdf$windspeedinfluence <- lgdf$windspeedinfluence * 1.1
+
+# Fit the model to the new data
+adjusted_model <- lm(maxsumdaily2 ~ windspeedinfluence + powergridstrength + resilience + recover, data=lgdf)
+
+# Tidy the adjusted model's output
+tidy_adjusted_model <- tidy(adjusted_model)
+
+# Print the tidy model's output after adjustment
+print(tidy_adjusted_model)
+
+# Compare the coefficients from the original and adjusted models
+# to assess the impact of the 10% increase in 'windspeedinfluence'
+
+write_csv(analysis_df, "analysis_df.csv")
+
+```
