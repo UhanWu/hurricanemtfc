@@ -1,0 +1,15 @@
+---
+title: "nri"
+format: html
+editor: visual
+---
+
+```{r}
+nridf <- read_csv("NRIvalues.csv") |>
+  mutate(fips_code = as.double(STCOFIPS)) |>
+  select(COUNTY, fips_code, BUILDVALUE, AGRIVALUE, AREA, RESL_SCORE, SOVI_SCORE)
+```
+
+```{r}
+nridfnew <- read_csv("NRIvalues.csv")
+```
