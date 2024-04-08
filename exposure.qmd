@@ -10,8 +10,22 @@ library(hurricaneexposure)
 library(hurricaneexposuredata)
 
 ```
+
 ```{r}
 map_counties(storm = "Harvey-2017", metric = "wind", wind_var = "vmax_sust")
+
+library(hurricaneexposure)
+
+# Ensure that data package is available before running the example.
+#  If it is not, see the `hurricaneexposure` package vignette for details
+# on installing the required data package.
+if (requireNamespace("hurricaneexposuredata", quietly = TRUE)) {
+
+county_wind(counties = c("22071", "51700"),
+            start_year = 1988, end_year = 2020,
+            wind_limit = 20, wind_var = "vmax_sust")
+}
+
 ```
 
 ```{r}
@@ -40,17 +54,18 @@ rain |>
   filter(storm_id == "Harvey-2017")
 
 ```
+
 ```{r}
 map_counties(storm = "Allison-2001", metric = "rainfall", days_included = -1:0) + 
         ggplot2::ggtitle("Rain during Allison (2001) for day before and day of closest approach")
 ```
-
 
 ```{r}
 hurr_tracks |>
   mutate(date_new = as.double(str_sub(date, 0, 4))) |>
   filter(date_new > 1997)
 ```
+
 ```{r}
 
 stormsfreq <- storm_winds |>
@@ -58,16 +73,22 @@ stormsfreq <- storm_winds |>
   filter(firstfips == "48") |>
   filter(vmax_gust > 17.49)  |>
   mutate(year = as.double(str_extract(storm_id, "\\d{4}$"))) |>
-  filter(year > 2018)
+  summarise(frequency = n()/30, .by = fips) 
 
-
-|>
-  summarise(frequency = n(), .by = fips)
+dffreqcoast <- plotfrequencyHUR |>
+  merge(centercounty)
+  
 ```
 
+```{r}
+modelfreq <- lm(dffreqcoast, formula = frequencyfinal ~ distanceCoast)
+summary(modelfreq)
+```
 
 ```{r}
 county_centers
 ```
 
+```{r}
 
+```
